@@ -6,3 +6,7 @@ export const formatCoords = (ubicacion: string) => {
 
 export const cls = (...args: (string | false | null | undefined)[]) =>
   args.filter(Boolean).join(' ');
+
+export const delay = (ms: number): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
