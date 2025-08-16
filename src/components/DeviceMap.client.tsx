@@ -1,12 +1,12 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Dispositivo } from '@/types/device';
 import { formatCoords } from '@/utils/formatters';
-import type { Map as LeafletMap } from 'leaflet';
+import { useMapEvents } from 'react-leaflet';
 
-// Carga dinámica de react-leaflet (cliente)
+// Carga dinámica de react-leaflet
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
@@ -17,34 +17,29 @@ type Props = {
   onPick?: (lat: number, lon: number) => void;
 };
 
+function ClickHandler({ onPick }: { onPick?: (lat: number, lon: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick?.(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
 export default function DeviceMap({ devices, onPick }: Props) {
   const center = useMemo(() => {
     if (devices.length > 0) {
       const c = formatCoords(devices[0].ubicacion);
       return [c.lat || -16.5, c.lon || -68.15] as [number, number];
     }
-    return [-16.5, -68.15] as [number, number]; // La Paz por defecto
+    return [-16.5, -68.15] as [number, number];
   }, [devices]);
-
-  // Opcional: se puede arreglar iconos de marker si los images no se muestran.
-  useEffect(() => {
-    // nada crítico aquí
-  }, []);
-
-  const handleMapReady = (mapInstance: LeafletMap | any) => {
-    // mapInstance es el objeto L.Map; registramos click para retornar coords
-    // @ts-ignore
-    mapInstance.on('click', (e: any) => {
-      const lat = e?.latlng?.lat;
-      const lon = e?.latlng?.lng;
-      if (lat && lon) onPick?.(lat, lon);
-    });
-  };
 
   return (
     <div className="h-[360px] w-full overflow-hidden rounded-xl border">
-      <MapContainer center={center} zoom={6} className="h-full w-full" whenReady={handleMapReady}>
+      <MapContainer center={center} zoom={6} className="h-full w-full">
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <ClickHandler onPick={onPick} />
         {devices.map((d) => {
           const c = formatCoords(d.ubicacion);
           if (!c || isNaN(c.lat) || isNaN(c.lon)) return null;
