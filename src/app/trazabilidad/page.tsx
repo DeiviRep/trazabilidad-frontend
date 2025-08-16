@@ -16,6 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 export default function TrazabilidadPage() {
   const { token } = useAuth();
   const router = useRouter();
+  const { user } = useAuth();
   const { devices, loading, error, register, update } = useDevices();
   const { coords, setCoords, captureBrowserLocation } = useMap();
   const [qrOpen, setQrOpen] = useState(false);
@@ -70,6 +71,9 @@ export default function TrazabilidadPage() {
       router.replace('/login');
     }
   }, [token, router]);
+  
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <ErrorAlert message="No autorizado. Inicia sesión." />;
 
   return (
     <div className="space-y-6">

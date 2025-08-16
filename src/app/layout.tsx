@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import Header from '@/components/Header.client';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'Trazabilidad',
@@ -14,6 +15,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-white text-gray-900">
         <AuthProvider>
           <div className="mx-auto max-w-7xl px-4 py-6">
+            <Toaster
+              position="top-right"
+              richColors
+              theme="light" // o "dark"
+              expand={true}
+              visibleToasts={3}
+              // closeButton
+              duration={5000}
+            />
             <Header />
             {children}
           </div>
