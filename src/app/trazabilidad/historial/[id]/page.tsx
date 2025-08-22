@@ -38,7 +38,7 @@ export default function HistorialPage({ params }: { params: { id: string } }) {
             <time className="mb-1 block text-xs text-gray-500">{new Date(it.timestamp).toLocaleString()}</time>
             <h3 className="text-sm font-semibold">{it.evento}</h3>
             <p className="text-sm text-gray-700">
-              {it.marca} {it.modelo} — {it.origen} — <span className="text-gray-500">{it.ubicacion}</span>
+              {it.marca} {it.modelo} — {it.origen} — <span className="text-gray-500">{it.ubicacion.lat - it.ubicacion.lon}</span>
             </p>
           </li>
         ))}

@@ -1,65 +1,54 @@
-import { UserType } from '@/context/AuthContext';
-import { delay } from '@/utils/formatters';
+// src/services/api.ts
+'use client';
+
 import axios, { AxiosError } from 'axios';
 import Cookies from 'js-cookie';
 import { toast } from 'sonner';
+import { delay } from '@/utils/formatters';
+import { EventoLotePayload, EventoUnitarioPayload, RegistroLotePayload, RegistroUnitPayload } from './typesDto';
+import { Dispositivo, EventoTipo } from '@/types/device';
 
 const MIN_DELAY_MS = 500;
 
-export async function withLoadingDelay<T>(apiCall: Promise<T>){
-  const [result] = await Promise.all([
-    apiCall,
-    delay(MIN_DELAY_MS)
-  ]);
+export async function withLoadingDelay<T>(apiCall: Promise<T>) {
+  const [result] = await Promise.all([apiCall, delay(MIN_DELAY_MS)]);
   return result;
 }
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
-  withCredentials: false
+  withCredentials: false,
 });
 
-// Adjunta JWT (si existe)
 api.interceptors.request.use((config) => {
   const token = Cookies.get('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  console.log('token: ',token)
   return config;
 });
 
-// Interceptor para manejar errores globales
 api.interceptors.response.use(
   (response) => {
-    // Mostrar notificación solo para métodos no-GET
     if (response.config.method !== 'get') {
       toast.success('Operación exitosa', {
         description: 'La acción se completó correctamente',
-        position: 'top-right',
+        position: 'bottom-right',
       });
     }
     return response;
   },
   (error: AxiosError) => {
     let errorMessage = 'Ocurrió un error inesperado';
-    
     if (error.response) {
       errorMessage = (error.response.data as any)?.message || errorMessage;
-      toast.error('Error', {
-        description: errorMessage,
-        position: 'top-right',
-      });
+      toast.error('Error', { description: errorMessage, position: 'bottom-right' });
     } else if (error.request) {
       toast.error('Error de conexión', {
         description: 'No se pudo conectar con el servidor',
-        position: 'top-right',
+        position: 'bottom-right',
       });
     } else {
-      toast.error('Error', {
-        description: 'Error al configurar la solicitud',
-        position: 'top-right',
-      });
+      toast.error('Error', { description: 'Error al configurar la solicitud', position: 'bottom-right' });
     }
-    
     return Promise.reject(error);
   }
 );
@@ -70,80 +59,81 @@ export type ApiError = {
   details?: any;
 };
 
+function handleApiError(error: unknown, defaultMessage: string): ApiError {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError;
+    return {
+      message: (axiosError.response?.data as any)?.message || defaultMessage,
+      statusCode: axiosError.response?.status,
+      details: axiosError.response?.data,
+    };
+  }
+  if (error instanceof Error) return { message: error.message || defaultMessage };
+  return { message: defaultMessage };
+}
+
+/* ============ AUTH ============ */
 export const AuthAPI = {
-  login: async (correo: string, password: string): Promise<{ access_token: string; user: UserType }> => {
+  login: async (email: string, password: string): Promise<{ access_token: string; user: any }> => {
     try {
-      const response = await api.post('/auth/login', { correo, password });
-      toast.success('Bienvenido', {
-        description: 'Inicio de sesión exitoso',
-        position: 'top-right',
-      });
-      return {user: response.data.user, access_token: response.data.token};
+      const response = await withLoadingDelay(api.post('/auth/login', { email, password }));
+      toast.success('Bienvenido', { description: 'Inicio de sesión exitoso', position: 'bottom-right' });
+      return { user: response.data.user, access_token: response.data.token };
     } catch (error) {
       throw handleApiError(error, 'Error durante el inicio de sesión');
     }
   },
+  me: async () => {
+    const { data } = await api.get('/auth/me');
+    return data;
+  },
 };
 
-export type RegistrarPayload = {
-  id?: string;
-  modelo: string;
-  marca: string;
-  origen: string;
-  latitud: string;
-  longitud: string;
-  evento: string;
-  loteId?: string;
-  documentos?: any[];
-  codigoDocumentos?: Record<string, string>;
-  hashDocumentos?: any[];
-  urlPublica?: string;
-};
-
-export type ActualizarPayload = {
-  id: string;
-  modelo?: string;
-  marca?: string;
-  origen?: string;
-  latitud: string;
-  longitud: string;
-  evento: string;
-  documentos?: any[];
-  codigoDocumentos?: Record<string, string>;
-  hashDocumentos?: any[];
-  urlPublica?: string;
-  forceUpdate?: boolean;
-};
-
+/* ============ TRAZABILIDAD API ============ */
 export const TrazabilidadAPI = {
-  registrar: async (payload: RegistrarPayload): Promise<any> => {
+  /* Registro */
+  registroUnitario: async (payload: RegistroUnitPayload) => {
     try {
-      const response = await api.post('/trazabilidad/registrar', payload);
-      toast.success('Registro creado', {
-        description: 'Los datos se guardaron correctamente',
-        position: 'top-right',
-      });
-      return response.data;
+      
+      const { data } = await withLoadingDelay(api.post('/trazabilidad/registro', payload));
+      return data;
     } catch (error) {
-      throw handleApiError(error, 'Error al registrar trazabilidad');
+      throw handleApiError(error, 'Error al registrar');
+    }
+  },
+  registroLote: async (payload: RegistroLotePayload) => {
+    console.log(payload)
+    try {
+      const { data } = await withLoadingDelay(api.post('/trazabilidad/registro/lote', payload));
+      return data;
+    } catch (error) {
+      throw handleApiError(error, 'Error al registrar lote');
     }
   },
 
-  actualizar: async (payload: ActualizarPayload): Promise<any> => {
+  /* Eventos unitarios (todos llaman a actualizar en backend/chaincode) */
+  eventoUnitario: async <E extends EventoTipo>(payload: EventoUnitarioPayload<E>) => {
     try {
-      const response = await api.post('/trazabilidad/actualizar', payload);
-      toast.success('Actualización exitosa', {
-        description: 'Los cambios se guardaron correctamente',
-        position: 'top-right',
-      });
-      return response.data;
+      const { data } = await withLoadingDelay(api.post(`/trazabilidad/${payload.tipo.toLowerCase()}`, payload));
+      return data;
     } catch (error) {
-      throw handleApiError(error, 'Error al actualizar trazabilidad');
+      throw handleApiError(error, `Error en evento ${payload.tipo}`);
     }
   },
 
-  // Métodos GET (no muestran toast por defecto)
-  listar: async (): Promise<any> => {
+  /* Eventos por lote */
+  eventoLote: async <E extends EventoTipo>(payload: EventoLotePayload<E>) => {
+    console.log(payload)
+    try {
+      const { data } = await withLoadingDelay(api.post(`/trazabilidad/${payload.tipo.toLowerCase()}/lote`, payload));
+      return data;
+    } catch (error) {
+      throw handleApiError(error, `Error en evento por lote ${payload.tipo}`);
+    }
+  },
+
+  /* Consultas */
+  listar: async (): Promise<Dispositivo[]> => {
     try {
       const { data } = await api.get('/trazabilidad/listar');
       return data;
@@ -151,67 +141,52 @@ export const TrazabilidadAPI = {
       throw handleApiError(error, 'Error al listar trazabilidades');
     }
   },
-
-  consultar: async (id: string): Promise<any> => {
+  consultar: async (id: string): Promise<Dispositivo> => {
     try {
       const { data } = await api.get(`/trazabilidad/consultar/${id}`);
       return data;
     } catch (error) {
-      throw handleApiError(error, `Error al consultar trazabilidad con ID ${id}`);
+      throw handleApiError(error, `Error al consultar ${id}`);
     }
   },
-
-  historial: async (id: string): Promise<any> => {
+  historial: async (id: string) => {
     try {
       const { data } = await api.get(`/trazabilidad/historial/${id}`);
       return data;
     } catch (error) {
-      throw handleApiError(error, `Error al obtener historial para ID ${id}`);
+      throw handleApiError(error, `Error al historial ${id}`);
     }
   },
-
-  listarPorLote: async (loteId: string): Promise<any> => {
+  listarPorLote: async (uuidLote: string): Promise<Dispositivo[]> => {
     try {
-      const { data } = await api.get(`/trazabilidad/por-lote/${loteId}`);
+      const { data } = await api.get(`/trazabilidad/lote/${uuidLote}`);
       return data;
     } catch (error) {
-      throw handleApiError(error, `Error al listar trazabilidades por lote ${loteId}`);
+      throw handleApiError(error, `Error al listar por lote ${uuidLote}`);
     }
   },
 
+  /* QR (se mantienen como están) */
   generarQR: async (id: string): Promise<{ qrUrl: string }> => {
     try {
       const { data } = await api.get(`/trazabilidad/qr/${id}`);
       toast.success('QR generado', {
         description: 'El código QR se creó exitosamente',
-        position: 'top-right',
+        position: 'bottom-right',
       });
       return data;
     } catch (error) {
       throw handleApiError(error, `Error al generar QR para ID ${id}`);
     }
-  }
+  },
+  generarQRLote: async (uuidLote: string): Promise<{ qrUrl: string }> => {
+    try {
+      const { data } = await withLoadingDelay(api.get(`/trazabilidad/qr/lote/${uuidLote}`));
+      return data;
+    } catch (error) {
+      throw handleApiError(error, `Error al generar QR de lote ${uuidLote}`);
+    }
+  },
 };
-
-function handleApiError(error: unknown, defaultMessage: string): ApiError {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError;
-    return {
-      message: (axiosError.response?.data as any)?.message || defaultMessage,
-      statusCode: axiosError.response?.status,
-      details: axiosError.response?.data
-    };
-  }
-
-  if (error instanceof Error) {
-    return {
-      message: error.message || defaultMessage
-    };
-  }
-
-  return {
-    message: defaultMessage
-  };
-}
 
 export default api;

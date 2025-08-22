@@ -1,20 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Dispositivo } from '@/types/device';
-import { ActualizarPayload, RegistrarPayload, TrazabilidadAPI } from '@/services/api';
+import type { Dispositivo, EventoTipo } from '@/types/device';
+import { TrazabilidadAPI} from '@/services/api';
+import { EventoLotePayload, EventoUnitarioPayload, RegistroLotePayload, RegistroUnitPayload } from '@/services/typesDto';
 
 export const useDevices = () => {
   const [devices, setDevices] = useState<Dispositivo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string|null>(null);
 
-  const reload = async () => {
+  const fetchDevices = async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await TrazabilidadAPI.listar();
-      setDevices(data);
+      setDevices(data || []);
     } catch (e:any) {
       setError(e?.message || 'Error al cargar');
     } finally {
@@ -22,19 +23,27 @@ export const useDevices = () => {
     }
   };
 
-  useEffect(() => {
-    reload();
-  }, []);
+  useEffect(() => { fetchDevices(); }, []);
 
-  const register = async (payload: RegistrarPayload) => {
-    const res = await TrazabilidadAPI.registrar(payload);
-    await reload();
+  const registerOne = async (payload: RegistroUnitPayload) => {
+    const res = await TrazabilidadAPI.registroUnitario(payload);
+    await fetchDevices();
+    return res;
+  };
+  const registerBatch = async (payload: RegistroLotePayload) => {
+    const res = await TrazabilidadAPI.registroLote(payload);
+    await fetchDevices();
     return res;
   };
 
-  const update = async (payload: ActualizarPayload) => {
-    const res = await TrazabilidadAPI.actualizar(payload);
-    await reload();
+  const updateEventOne = async <E extends EventoTipo>(payload: EventoUnitarioPayload<E>) => {
+    const res = await TrazabilidadAPI.eventoUnitario(payload);
+    await fetchDevices();
+    return res;
+  };
+  const updateEventBatch = async <E extends EventoTipo>(payload: EventoLotePayload<E>) => {
+    const res = await TrazabilidadAPI.eventoLote(payload);
+    await fetchDevices();
     return res;
   };
 
@@ -44,5 +53,8 @@ export const useDevices = () => {
     return map;
   }, [devices]);
 
-  return { devices, byId, loading, error, reload, register, update };
+  return {
+    devices, byId, loading, error, fetchDevices,
+    registerOne, registerBatch, updateEventOne, updateEventBatch
+  };
 };

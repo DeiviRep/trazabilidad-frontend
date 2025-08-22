@@ -19,6 +19,7 @@ export default function DeviceTable({ data, onSelect, onGenerateQR }: Props) {
             <th className="px-4 py-2">Modelo</th>
             <th className="px-4 py-2">Marca</th>
             <th className="px-4 py-2">Evento</th>
+            <th className="px-4 py-2">Lote</th>
             <th className="px-4 py-2">Ubicación</th>
             <th className="px-4 py-2">Acciones</th>
           </tr>
@@ -32,6 +33,15 @@ export default function DeviceTable({ data, onSelect, onGenerateQR }: Props) {
                 <td className="px-4 py-2">{d.modelo}</td>
                 <td className="px-4 py-2">{d.marca}</td>
                 <td className="px-4 py-2">{d.evento}</td>
+                <td className="px-4 py-2">
+                  {d.uuidLote ? (
+                    <a href={`/trazabilidad/lote/${d.uuidLote}`} className="text-blue-600 hover:underline">
+                      {d.uuidLote}
+                    </a>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-2">{c.label}</td>
                 <td className="px-4 py-2">
                   <div className="flex gap-2">
@@ -54,7 +64,7 @@ export default function DeviceTable({ data, onSelect, onGenerateQR }: Props) {
           })}
           {data.length === 0 && (
             <tr>
-              <td className="px-4 py-6 text-center text-gray-500" colSpan={6}>Sin dispositivos</td>
+              <td className="px-4 py-6 text-center text-gray-500" colSpan={7}>Sin dispositivos</td>
             </tr>
           )}
         </tbody>

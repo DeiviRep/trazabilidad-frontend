@@ -1,6 +1,9 @@
-export const formatCoords = (ubicacion: string) => {
+import { UbicacionTipo } from "@/types/device";
+
+export const formatCoords = (ubicacion: UbicacionTipo) => {
   if (!ubicacion) return { lat: 0, lon: 0, label: '-' };
-  const [lat, lon] = ubicacion.split(',').map(Number);
+  const lat = ubicacion.lat;
+  const lon = ubicacion.lon;
   return { lat, lon, label: `${lat.toFixed(4)}, ${lon.toFixed(4)}` };
 };
 
