@@ -1,103 +1,147 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useEffect, useState } from 'react';
+import { Package, Truck, CheckCircle, MapPin, Globe } from 'lucide-react';
+import { TrazabilidadAPI } from '@/services/api';
+
+interface Stat {
+  label: string;
+  valor: string;
+  icono: React.ComponentType<{ className?: string }>;
+  color: string;
+}
+
+interface Lote {
+  id: string;
+  lote: string;
+  marca: string;
+  modelo: string;
+  cantidadProductos: number;
+  estado: string;
+  url: string;
+  fechaCreacion: string;
+  eventos: Array<{
+    tipo: string;
+    fecha: string;
+    punto: string;
+    coordenadas: [number, number];
+  }>;
+}
+
+interface recienteType {
+  id: string,
+  uuidLote: string,
+  urlLote?: string,
+  modelo: string,
+  marca: string,
+  imeiSerial: string,
+  estado: string,
+  timestamp: string;
+}
+interface dataEstadisticaType {
+  registrados: string,
+  distribuidos: string,
+  enTransitos: string,
+  nacionalizados: string,
+  dispositivosRecientes: recienteType[]
+}
+
+export default function DashboardPage() {
+
+  const [dataEstadistica, setDataEstadistica] = useState<dataEstadisticaType>();
+  const stats: Stat[] = [
+    { label: 'Productos Registrados', valor: dataEstadistica?.registrados || '0', icono: Package, color: 'bg-blue-500' },
+    { label: 'En Tránsito', valor: dataEstadistica?.enTransitos || '0', icono: Truck, color: 'bg-yellow-500' },
+    { label: 'Nacionalizados', valor: dataEstadistica?.nacionalizados || '0', icono: CheckCircle, color: 'bg-green-500' },
+    { label: 'Distribuidos', valor: dataEstadistica?.distribuidos || '0', icono: MapPin, color: 'bg-purple-500' }
+  ];
+  
+  const cargarDatos = async () => {
+    const data = await TrazabilidadAPI.listarPorEstado();
+    console.log(data);
+    setDataEstadistica({
+      dispositivosRecientes: data.dispositivosRecientes.map((item: any) => {
+        return {
+          id: item.productoId,
+          timestamp: item.fecha,
+          imeiSerial: item.imeiSerial,
+          uuidLote: item.lote,
+          marca: item.marca,
+          modelo: item.modelo,
+          estado: item.tipo,
+        } as recienteType
+      }),
+      distribuidos: data.estadisticas.enDistribucion,
+      nacionalizados: data.estadisticas.nacionalizados,
+      enTransitos: data.estadisticas.embarcados,
+      registrados: data.estadisticas.registrados
+    })
+  };
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
+        {/* <div className="text-sm text-gray-500">Última actualización: {new Date().toLocaleString('es-BO')}</div> */}
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icono;
+          return (
+            <div key={index} className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center">
+                <div className={`${stat.color} p-3 rounded-lg`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.valor}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
+          <div className="space-y-4">
+            {dataEstadistica?.dispositivosRecientes.map((producto: recienteType, index) => (
+              <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Package className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{producto.marca} {producto.modelo}</p>
+                  <p className="text-xs text-gray-500">Estado: {producto.estado.toUpperCase()}</p>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date(producto.timestamp).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Mapa de Envíos</h3>
+          <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <Globe className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">Mapa interactivo</p>
+              <p className="text-sm text-gray-400">Visualización de rutas y ubicaciones</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+
+

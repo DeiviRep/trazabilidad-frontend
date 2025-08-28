@@ -5,8 +5,7 @@ import axios, { AxiosError } from 'axios';
 import Cookies from 'js-cookie';
 import { toast } from 'sonner';
 import { delay } from '@/utils/formatters';
-import { EventoLotePayload, EventoUnitarioPayload, RegistroLotePayload, RegistroUnitPayload } from './typesDto';
-import { Dispositivo, EventoTipo } from '@/types/device';
+import { CreateDispositivoDto, CreateLoteDispositivosDto, EventoLotePayload, UpdateEventoDto} from './typesDto';
 
 const MIN_DELAY_MS = 500;
 
@@ -92,19 +91,23 @@ export const AuthAPI = {
 /* ============ TRAZABILIDAD API ============ */
 export const TrazabilidadAPI = {
   /* Registro */
-  registroUnitario: async (payload: RegistroUnitPayload) => {
+  registroUnitario: async (payload: CreateDispositivoDto)=> {
     try {
-      
-      const { data } = await withLoadingDelay(api.post('/trazabilidad/registro', payload));
+      const rutaApi = '/trazabilidad/registro'
+      const { data } = await withLoadingDelay(api.post(rutaApi, payload));
+      console.log(rutaApi)
+      console.log(`Datos Registro: ${data}`)
       return data;
     } catch (error) {
       throw handleApiError(error, 'Error al registrar');
     }
   },
-  registroLote: async (payload: RegistroLotePayload) => {
-    console.log(payload)
+  registroLote: async (payload: CreateLoteDispositivosDto) => {
     try {
-      const { data } = await withLoadingDelay(api.post('/trazabilidad/registro/lote', payload));
+      const rutaApi = '/trazabilidad/registro/lote'
+      const { data } = await withLoadingDelay(api.post(rutaApi, payload));
+      console.log(rutaApi)
+      console.log(`Datos Registro Lote: ${data}`)
       return data;
     } catch (error) {
       throw handleApiError(error, 'Error al registrar lote');
@@ -112,38 +115,49 @@ export const TrazabilidadAPI = {
   },
 
   /* Eventos unitarios (todos llaman a actualizar en backend/chaincode) */
-  eventoUnitario: async <E extends EventoTipo>(payload: EventoUnitarioPayload<E>) => {
+  eventoUnitario: async (payload: UpdateEventoDto) => {
     try {
-      const { data } = await withLoadingDelay(api.post(`/trazabilidad/${payload.tipo.toLowerCase()}`, payload));
+      const rutaApi = `/trazabilidad/${payload.eventoUrlApi.toLowerCase()}`
+      const { data } = await withLoadingDelay(api.post(rutaApi, payload.body));
+      console.log(rutaApi)
+      console.log(`Datos evento unitario ${payload.eventoUrlApi}: ${data}`)
       return data;
     } catch (error) {
-      throw handleApiError(error, `Error en evento ${payload.tipo}`);
+      throw handleApiError(error, `Error en evento ${payload.eventoUrlApi}`);
     }
   },
 
   /* Eventos por lote */
-  eventoLote: async <E extends EventoTipo>(payload: EventoLotePayload<E>) => {
-    console.log(payload)
+  eventoLote: async (payload: EventoLotePayload) => {
     try {
-      const { data } = await withLoadingDelay(api.post(`/trazabilidad/${payload.tipo.toLowerCase()}/lote`, payload));
+      const rutaApi = `/trazabilidad/${payload.eventoUrlApi.toLowerCase()}/lote`
+      const { data } = await withLoadingDelay(api.post(rutaApi, payload.body));
+      console.log(rutaApi)
+      console.log(`Datos evento lote ${payload.eventoUrlApi}: ${data}`)
       return data;
     } catch (error) {
-      throw handleApiError(error, `Error en evento por lote ${payload.tipo}`);
+      throw handleApiError(error, `Error en evento por lote ${payload.eventoUrlApi}`);
     }
   },
 
   /* Consultas */
-  listar: async (): Promise<Dispositivo[]> => {
+  listar: async () => {
     try {
-      const { data } = await api.get('/trazabilidad/listar');
+      const rutaApi = '/trazabilidad/listar'
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Listar: ${data}`)
       return data;
     } catch (error) {
       throw handleApiError(error, 'Error al listar trazabilidades');
     }
   },
-  consultar: async (id: string): Promise<Dispositivo> => {
+  consultar: async (id: string) => {
     try {
-      const { data } = await api.get(`/trazabilidad/consultar/${id}`);
+      const rutaApi = `/trazabilidad/consultar/${id}`
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Consultar: ${data}`)
       return data;
     } catch (error) {
       throw handleApiError(error, `Error al consultar ${id}`);
@@ -151,25 +165,58 @@ export const TrazabilidadAPI = {
   },
   historial: async (id: string) => {
     try {
-      const { data } = await api.get(`/trazabilidad/historial/${id}`);
+      const rutaApi = `/trazabilidad/historial/${id}`
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Historial: ${data}`)
       return data;
     } catch (error) {
       throw handleApiError(error, `Error al historial ${id}`);
     }
   },
-  listarPorLote: async (uuidLote: string): Promise<Dispositivo[]> => {
+  listarPorLote: async (uuidLote: string) => {
     try {
-      const { data } = await api.get(`/trazabilidad/lote/${uuidLote}`);
+      const rutaApi = `/trazabilidad/lote/${uuidLote}`
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Listar Por Lote: ${data}`)
       return data;
     } catch (error) {
       throw handleApiError(error, `Error al listar por lote ${uuidLote}`);
     }
   },
 
-  /* QR (se mantienen como están) */
-  generarQR: async (id: string): Promise<{ qrUrl: string }> => {
+  listarResumenLotes: async () => {
     try {
-      const { data } = await api.get(`/trazabilidad/qr/${id}`);
+      const rutaApi = `/trazabilidad/resumen-lotes`
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Listar Por Lote: ${data}`)
+      return data;
+    } catch (error) {
+      throw handleApiError(error, `Error al listar por lotes`);
+    }
+  },
+
+  listarPorEstado: async () => {
+    try {
+      const rutaApi = '/trazabilidad/listar/estadistica'
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Listar Por estados: ${data}`)
+      return data;
+    } catch (error) {
+      throw handleApiError(error, 'Error al listar trazabilidades');
+    }
+  },
+
+  /* QR (se mantienen como están) */
+  generarQR: async (id: string) => {
+    try {
+      const rutaApi = `/trazabilidad/qr/${id}`
+      const { data } = await api.get(rutaApi);
+      console.log(rutaApi)
+      console.log(`Genero QR: ${data}`)
       toast.success('QR generado', {
         description: 'El código QR se creó exitosamente',
         position: 'bottom-right',
@@ -179,14 +226,39 @@ export const TrazabilidadAPI = {
       throw handleApiError(error, `Error al generar QR para ID ${id}`);
     }
   },
-  generarQRLote: async (uuidLote: string): Promise<{ qrUrl: string }> => {
-    try {
-      const { data } = await withLoadingDelay(api.get(`/trazabilidad/qr/lote/${uuidLote}`));
-      return data;
-    } catch (error) {
-      throw handleApiError(error, `Error al generar QR de lote ${uuidLote}`);
-    }
+
+//TODO: NUEVOS METODOS
+  buscar: async (params: Record<string, string | undefined>) => {
+    const query = new URLSearchParams(params as any).toString();
+    const { data } = await api.get(`/trazabilidad/buscar?${query}`);
+    return data;
   },
+
+  buscarPorQR: async (codigo: string) => {
+    const { data } = await api.get(`/trazabilidad/buscar-qr/${codigo}`);
+    return data;
+  },
+
+  obtenerEstadisticas: async () => {
+    const { data } = await api.get('/trazabilidad/estadisticas');
+    return data;
+  },
+
+  verificarIntegridad: async (productoId: string) => {
+    const { data } = await api.get(`/trazabilidad/integridad/${productoId}`);
+    return data;
+  },
+
+  auditarLote: async (uuidLote: string) => {
+    const { data } = await api.get(`/trazabilidad/auditoria/lote/${uuidLote}`);
+    return data;
+  },
+
+  descargarQRImagen: async (id: string) => {
+    const { data } = await api.get(`/trazabilidad/qr-image/${id}`, { responseType: 'blob' });
+    return URL.createObjectURL(data); // útil para <img src="..." />
+  },
+
 };
 
 export default api;

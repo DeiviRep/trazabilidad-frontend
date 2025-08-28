@@ -1,9 +1,14 @@
-/* ============ TRAZABILIDAD DTOs ============ */
+import { UbicacionTipo } from "@/types/device";
 
-import { EventoTipo } from "@/types/device";
+export type EventoTipoDtoUrlApi =
+  | 'REGISTRO'
+  | 'EMBARQUE'
+  | 'DESEMBARQUE'
+  | 'NACIONALIZACION'
+  | 'DISTRIBUCION'
+  | 'ADQUIRIDO';
 
-/** Registro (unitario y lote) */
-export type RegistroUnitPayload = {
+export type CreateDispositivoDto = {
   id?: string;
   modelo: string;
   marca: string;
@@ -11,72 +16,50 @@ export type RegistroUnitPayload = {
   origenPais: string;
   latitud: string;
   longitud: string;
-  uuidLote?: string; // uuidLote
+  uuidLote?: string;
+  puntoControl: string;
 };
 
-export type RegistroLotePayload = {
-  uuidLote: string;
-  urlLote?: string; // se puede mandar desde FE si lo generas acá; backend también puede generarlo
-  dispositivos: Array<{
-    id?: string;
-    modelo: string;
-    marca: string;
-    imeiSerial: string;
-    origenPais: string;
-    latitud: string;
-    longitud: string;
-  }>;
+export type CreateLoteDispositivosDto = {
+  uuidLote?: string;
+  dispositivos: CreateDispositivoDto[];
 };
 
-/** Eventos (unitario y lote) */
-export type EventoUnitarioPayload<E extends EventoTipo> = {
+export type UpdateEventoDto = {
+  eventoUrlApi: EventoTipoDtoUrlApi;
+  body: EventoPayload;
+};
+
+export type EventoPayload = {
   id: string;
-  tipo: E;
   latitud: string;
   longitud: string;
-  // Campos específicos por evento (opcionalmente presentes según E)
-  tipoTransporte?: string;
-  nroContenedor?: string;
-  puertoSalida?: string;
+  puntoControl: string;
 
-  puertoExtranjero?: string;
+  // EMBARQUE
+  nroContenedor?: string;
+  tipoTransporte?: string;
+
+  // DESEMBARQUE
   integridad?: boolean;
   descripcionIntegridad?: string;
 
-  dim?: string;            // Nacionalización
-  valorCif?: number;
+  // NACIONALIZACION
+  dim?: string;
+  valorCIF?: number;   // compatibilidad con chaincode
+  totalPagado?: number;
   arancel?: number;
   iva?: number;
   ice?: number;
-  totalPagado?: number;
 
-  comerciante?: string;    // Distribución
-  deposito?: string;
+  // DISTRIBUCION
+  comerciante?: string;
 
-  tienda?: string;         // Producto Adquirido
-  fechaCompra?: string;    // ISO
+  // ADQUIRIDO
+  fechaCompra?: string; // ISO
 };
 
-export type EventoLotePayload<E extends EventoTipo> = {
-  uuidLote: string;
-  tipo: E;
-  latitud: string;
-  longitud: string;
-  // mismos específicos que unitario (aplican al lote completo)
-  tipoTransporte?: string;
-  nroContenedor?: string;
-  puertoSalida?: string;
-  puertoExtranjero?: string;
-  integridad?: boolean;
-  descripcionIntegridad?: string;
-  dim?: string;
-  valorCif?: number;
-  arancel?: number;
-  iva?: number;
-  ice?: number;
-  totalPagado?: number;
-  comerciante?: string;
-  deposito?: string;
-  tienda?: string;
-  fechaCompra?: string;
+export type EventoLotePayload = {
+  eventoUrlApi: EventoTipoDtoUrlApi;
+  body: EventoPayload[];
 };
