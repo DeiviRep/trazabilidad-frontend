@@ -30,7 +30,7 @@ export type EventFormValues = {
 
   // Nacionalización
   dim?: string;
-  valorCif?: string;
+  valorCIF?: string;
   arancel?: string;
   iva?: string;
   ice?: string;
@@ -175,7 +175,7 @@ export default function EventForm({ defaultValues, onSubmit, onUseLocation, mode
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
             <div>
               <label className="block text-xs text-gray-500">Valor CIF</label>
-              <input className="w-full rounded-lg border px-3 py-2" type="number" step="0.01" {...register('valorCif')} />
+              <input className="w-full rounded-lg border px-3 py-2" type="number" step="0.01" {...register('valorCIF')} />
             </div>
             <div>
               <label className="block text-xs text-gray-500">Arancel</label>
