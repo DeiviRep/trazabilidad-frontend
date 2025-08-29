@@ -141,7 +141,7 @@ export const TrazabilidadAPI = {
   },
 
   /* Consultas */
-  listar: async () => {
+  listarProductos: async () => {
     try {
       const rutaApi = '/trazabilidad/listar'
       const { data } = await api.get(rutaApi);
