@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Package, Truck, Ship, CheckCircle, ChevronRight, MapPin } from 'lucide-react';
+import React, { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
+import { Package, Truck, Ship, CheckCircle, ChevronRight, MapPin, Box, Calendar } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
+import { useMap } from '@/hooks/useMap';
 
 type EstadoEvento = 'REGISTRADO' | 'EMBARCADO' | 'DESEMBARCADO' | 'NACIONALIZADO' | 'EN_DISTRIBUCION' | 'PRODUCTO_ADQUIRIDO';
 type ColorName = 'blue' | 'orange' | 'cyan' | 'green' | 'purple' | 'pink';
@@ -61,7 +62,7 @@ const fakeLotes: Lote[] = [
     id: '70f60666-91c0-4b4e-95be-61a0348778b5',
     marca: 'Samsung',
     modelo: 'Galaxy S24',
-    cantidadProductos: 0,
+    cantidadProductos: 150,
     estado: 'REGISTRADO',
     url: 'trazabilidad.io/lote/uuid-002',
     fechaCreacion: '2024-08-01T10:00:00Z',
@@ -74,7 +75,7 @@ const fakeLotes: Lote[] = [
     id: 'uuid-001-Samsumg',
     marca: 'Samsung',
     modelo: 'Galaxy S24',
-    cantidadProductos: 0,
+    cantidadProductos: 200,
     estado: 'NACIONALIZADO',
     url: 'trazabilidad.io/lote/uuid-001',
     fechaCreacion: '2024-08-01T10:00:00Z',
@@ -93,66 +94,63 @@ const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
     estado: 'EMBARCADO',
     color: 'orange',
     icon: Truck,
-    descripcion: "Registra información del transporte y contenedor"
+    descripcion: "Registra información del transporte y contenedor para todo el lote"
   },
   DESEMBARQUE: {
     titulo: "Desembarque",
     estado: 'DESEMBARCADO',
     color: 'cyan',
     icon: Ship,
-    descripcion: "Verifica llegada al puerto extranjero e integridad"
+    descripcion: "Verifica llegada al puerto extranjero e integridad del lote completo"
   },
   NACIONALIZACION: {
     titulo: "Nacionalización",
     estado: 'NACIONALIZADO',
     color: 'green',
     icon: CheckCircle,
-    descripcion: "Procesa documentos aduaneros y pago de impuestos"
+    descripcion: "Procesa documentos aduaneros y pago de impuestos para el lote"
   },
   DISTRIBUCION: {
     titulo: "Distribución",
     estado: 'EN_DISTRIBUCION',
     color: 'purple',
     icon: Package,
-    descripcion: "Distribuye productos a comerciantes y tiendas"
+    descripcion: "Distribuye productos del lote a comerciantes y tiendas"
   },
   PRODUCTO_ADQUIRIDO: {
-    titulo: "Producto Adquirido",
+    titulo: "Lote Completado",
     estado: 'PRODUCTO_ADQUIRIDO',
     color: 'pink',
     icon: Package,
-    descripcion: "Registra venta final al consumidor"
+    descripcion: "Marca el lote como completamente distribuido"
   }
 };
 
-export default function LoteIndividualPage({ params }: { params: Params }) {
+export default function LoteIndividualPage({ params }: { params: Promise<Params> }) {
   const router = useRouter();
+  const {captureBrowserLocation, coords}= useMap()
+  const { id: idLote } = use(params);
   const [loteSeleccionado, setLoteSeleccionado] = useState<Lote | null>(null);
-  const [coords] = useState<{ lat: number; lon: number } | null>(null);
   const [etapaActual, setEtapaActual] = useState<keyof typeof ETAPAS_FLUJO>('EMBARQUE');
 
   useEffect(() => {
-    // Find the lote by ID
-    const lote = fakeLotes.find(l => l.id === params.id);
+    const lote = fakeLotes.find(l => l.id === idLote);
     if (lote) {
       setLoteSeleccionado(lote);
-      // Set next stage based on current state
       const nextEtapa = getNextEtapa(lote.estado);
       setEtapaActual(nextEtapa);
     }
-  }, [params?.id]);
+  }, []);
+
+  const run = async () => {
+      const data = await TrazabilidadAPI.listarPorLote(idLote);
+      console.log(data);
+  };
 
   useEffect(() => {
-    const run = async () => {
-      try {
-        const data = await TrazabilidadAPI.listarPorLote(params.id);
-        console.log(data);
-      } catch (e:any) {
-      } finally {
-      }
-    };
+    if (!idLote) return;
     run();
-  }, [params?.id]);
+  }, [idLote]);
 
   const getNextEtapa = (estadoActual: string): keyof typeof ETAPAS_FLUJO => {
     const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
@@ -161,20 +159,16 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
   };
 
   const handleSubmit = (formData: Partial<EventFormData>): void => {
-    alert('Evento registrado exitosamente');
+    alert('Evento registrado exitosamente para el lote completo');
     router.push('/lotes');
   };
 
-  const handleUseLocation = (): void => {
-    // Simulate getting location
-    alert('Ubicación capturada desde el navegador');
-  };
 
   if (!loteSeleccionado) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <Box className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">Cargando información del lote...</p>
         </div>
       </div>
@@ -244,6 +238,9 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
   };
 
   const EventForm: React.FC = () => {
+    const handleUseLocation = async () => {
+      await captureBrowserLocation()
+    };
     const [formData, setFormData] = useState<EventFormData>({
       punto: '',
       latitud: '',
@@ -362,7 +359,7 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valor CIF (USD)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valor CIF Total del Lote (USD)</label>
                 <input
                   type="number"
                   name="valorCIF"
@@ -372,7 +369,7 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Total Pagado (USD)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Pagado en Aduana (USD)</label>
                 <input
                   type="number"
                   name="totalPagado"
@@ -385,11 +382,11 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
           )}
         </div>
 
-        <div className="flex justify-between pt-6 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row justify-between items-center pt-6 border-t border-gray-200 space-y-4 sm:space-y-0">
           <button
             type="button"
             onClick={() => router.push('/lotes')}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Volver a Lotes
           </button>
@@ -403,7 +400,7 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
           </button>
           <button
             type="submit"
-            className={`px-6 py-2 bg-${etapaConfig.color}-600 text-white rounded-lg hover:bg-${etapaConfig.color}-700 transition-colors flex items-center space-x-2`}
+            className={`px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-${etapaConfig.color}-700 transition-colors flex items-center space-x-2`}
           >
             <etapaConfig.icon className="w-4 h-4" />
             <span>Registrar {etapaConfig.titulo}</span>
@@ -417,23 +414,47 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
     <div className="space-y-6">
       {/* Header del lote */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-blue-100 rounded-xl">
+              <Box className="w-8 h-8 text-blue-600" />
+            </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Gestión de Eventos</h2>
-              <p className="text-gray-600">{loteSeleccionado.lote} - {loteSeleccionado.marca} {loteSeleccionado.modelo}</p>
+              <h1 className="text-3xl font-bold text-gray-900">Gestión de Lote</h1>
+              <div className="flex items-center space-x-2 mt-1">
+                <span className="text-lg font-semibold text-blue-600">{loteSeleccionado.lote}</span>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-700">{loteSeleccionado.marca} {loteSeleccionado.modelo}</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">ID: {loteSeleccionado.id}</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Estado actual</div>
-            <div className="text-lg font-semibold text-green-600">{loteSeleccionado.estado.replace('_', ' ')}</div>
+          <div className="grid grid-cols-2 gap-6 text-center lg:text-right">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center justify-center lg:justify-end space-x-2 mb-1">
+                <Package className="w-5 h-5 text-blue-600" />
+                <span className="text-sm text-blue-600 font-medium">Productos en Lote</span>
+              </div>
+              <div className="text-2xl font-bold text-blue-800">{loteSeleccionado.cantidadProductos}</div>
+              <div className="text-xs text-blue-600">unidades</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="flex items-center justify-center lg:justify-end space-x-2 mb-1">
+                <Calendar className="w-5 h-5 text-green-600" />
+                <span className="text-sm text-green-600 font-medium">Estado Actual</span>
+              </div>
+              <div className="text-lg font-semibold text-green-800">{loteSeleccionado.estado.replace('_', ' ')}</div>
+              <div className="text-xs text-green-600">
+                {new Date(loteSeleccionado.fechaCreacion).toLocaleDateString('es-BO')}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Indicador de progreso */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Progreso del Proceso</h3>
+        <h3 className="text-lg text-gray-900 mb-4">Progreso del Proceso</h3>
         <ProgressIndicator />
       </div>
 
@@ -445,8 +466,11 @@ export default function LoteIndividualPage({ params }: { params: Params }) {
               <etapaConfig.icon size={32} className={`text-${etapaConfig.color}-600`} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{etapaConfig.titulo}</h2>
+              <h2 className="text-2xl text-gray-900">Registrar {etapaConfig.titulo}</h2>
               <p className="text-gray-600 mt-1">{etapaConfig.descripcion}</p>
+              <div className="text-sm text-blue-600 font-medium mt-2">
+                Este evento se aplicará a las {loteSeleccionado.cantidadProductos} unidades del lote
+              </div>
             </div>
           </div>
         </div>

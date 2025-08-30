@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import { Download, QrCode, Package, Ship, Truck, CheckCircle, MapPin } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 
@@ -33,7 +33,8 @@ interface Params {
   id: string
 }
 
-export default function TrazabilidadPage({ params }: { params: Params }) {
+export default function TrazabilidadPage({ params }: { params: Promise<Params> }) {
+  const { id: idProducto } = use(params);
   const [dataDispositivos, setDataDispositivos] = useState<DispositivoDataType>({} as DispositivoDataType);
 
   const getEventIcon = (tipo: EstadoEvento): React.ComponentType<{ className?: string }> => {
@@ -68,8 +69,8 @@ export default function TrazabilidadPage({ params }: { params: Params }) {
   };
 
   useEffect(() => {
-    cargarDatos(params.id);
-  }, [params.id]);
+    cargarDatos(idProducto);
+  }, [idProducto]);
 
   return (
     <div className="space-y-6">
