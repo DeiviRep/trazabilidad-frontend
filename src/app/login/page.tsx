@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       const { access_token, user } = await AuthAPI.login(correo, password);
       login(access_token, user);
-      router.push('/trazabilidad');
+      router.push('/');
     } catch (e:any) {
       setErr(e?.message || 'Error de autenticación');
     }

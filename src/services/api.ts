@@ -131,7 +131,7 @@ export const TrazabilidadAPI = {
   eventoLote: async (payload: EventoLotePayload) => {
     try {
       const rutaApi = `/trazabilidad/${payload.eventoUrlApi.toLowerCase()}/lote`
-      const { data } = await withLoadingDelay(api.post(rutaApi, payload.body));
+      const { data } = await withLoadingDelay(api.post(rutaApi, {dispositivos: payload.body}));
       console.log(rutaApi)
       console.log(`Datos evento lote ${payload.eventoUrlApi}: ${data}`)
       return data;
