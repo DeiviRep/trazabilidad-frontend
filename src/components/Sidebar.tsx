@@ -32,7 +32,7 @@ export const Sidebar: React.FC = () => {
     { id: 'dashboard', label: 'Dashboard', icon: Home, href: '/' },
     { id: 'productos', label: 'Productos', icon: Package, href: '/productos' },
     { id: 'registro', label: 'Nuevo Pedido', icon: Plus, href: '/registro' },
-    { id: 'trazabilidad', label: 'Historial Producto', icon: History, href: '/trazabilidad' },
+    // { id: 'trazabilidad', label: 'Historial Producto', icon: History, href: '/trazabilidad' },
     { id: 'scanner', label: 'Escanear QR', icon: Scan, href: '/scanner' },
     { id: 'lotes', label: 'Gestión de Lotes', icon: Package, href: '/lotes' },
   ];
