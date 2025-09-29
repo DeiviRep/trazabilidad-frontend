@@ -449,10 +449,12 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
     const ordenEstados: EstadoEvento[] = ['REGISTRADO', 'EMBARCADO', 'DESEMBARCADO', 'NACIONALIZADO', 'EN_DISTRIBUCION', 'PRODUCTO_ADQUIRIDO'];
     const etapaCompletada = (estado: EstadoEvento): boolean => {
       const indiceEstado = ordenEstados.indexOf(estado);
-      // Una etapa está completada si NO hay productos en ese estado Y hay productos en estados superiores
-      const hayProductosEnEstado = (estadosProductos[estado] || 0) > 0;
-      const hayProductosEnEstadosSuperiores = ordenEstados.slice(indiceEstado + 1).some(e => (estadosProductos[e] || 0) > 0);
-      return !hayProductosEnEstado && hayProductosEnEstadosSuperiores;
+      // Una etapa está completada si TODOS los productos están en estados iguales o superiores a este
+      // Es decir, si ningún producto está en estados anteriores a este
+      const productosEnEstadosAnteriores = ordenEstados.slice(0, indiceEstado).some(e => (estadosProductos[e] || 0) > 0);
+      const hayProductosEnEsteMismoEstadoOSuperior = ordenEstados.slice(indiceEstado).some(e => (estadosProductos[e] || 0) > 0);
+      // Completada si no hay productos en estados anteriores Y hay productos que llegaron a este estado o lo superaron
+      return !productosEnEstadosAnteriores && hayProductosEnEsteMismoEstadoOSuperior;
     };
 
     return (
@@ -465,6 +467,9 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
             const hayProductosEnEsteEstado = cantidadEnEsteEstado > 0;
             const esEtapaActiva = etapa === etapaActual;
             const estaCompletada = etapaCompletada(config.estado);
+            
+            // Obtener la cantidad de productos DISPONIBLES para procesar en esta etapa
+            const productosDisponiblesParaEstaEtapa = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado).length;
 
             return (
               <div key={etapa} className="flex items-center">
@@ -473,7 +478,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                     ? `bg-${config.color}-50 border-${config.color}-200 shadow-md` 
                     : estaCompletada
                       ? 'bg-green-50 border-green-200 shadow-sm'
-                      : hayProductosEnEsteEstado 
+                      : productosDisponiblesParaEstaEtapa > 0
                         ? 'bg-yellow-50 border-yellow-200 shadow-sm' 
                         : 'bg-gray-50 border-gray-200'
                 }`}>
@@ -482,14 +487,12 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                       ? `bg-white text-${config.color}-600 shadow-sm` 
                       : estaCompletada
                         ? 'bg-green-500 text-white shadow-sm'
-                        : hayProductosEnEsteEstado 
+                        : productosDisponiblesParaEstaEtapa > 0
                           ? 'bg-yellow-400 text-white' 
                           : 'bg-gray-200 text-gray-400'
                   }`}>
                     {estaCompletada ? (
                       <CheckCircle size={18} className="animate-pulse" />
-                    ) : hayProductosEnEsteEstado && !esEtapaActiva ? (
-                      <Icon size={18} />
                     ) : (
                       <Icon size={18} />
                     )}
@@ -500,7 +503,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                         ? `text-${config.color}-700` 
                         : estaCompletada 
                           ? 'text-green-700' 
-                          : hayProductosEnEsteEstado 
+                          : productosDisponiblesParaEstaEtapa > 0
                             ? 'text-yellow-700' 
                             : 'text-gray-400'
                     }`}>
@@ -511,16 +514,14 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                         ? 'text-gray-600' 
                         : estaCompletada 
                           ? 'text-green-600 font-medium' 
-                          : hayProductosEnEsteEstado 
+                          : productosDisponiblesParaEstaEtapa > 0
                             ? 'text-yellow-600' 
                             : 'text-gray-400'
                     }`}>
                       {estaCompletada ? (
                         '✓ Completado'
-                      ) : config.esDinamico && cantidadEnEsteEstado > 0 ? (
-                        `${cantidadEnEsteEstado} productos`
-                      ) : hayProductosEnEsteEstado ? (
-                        `${cantidadEnEsteEstado} en proceso`
+                      ) : productosDisponiblesParaEstaEtapa > 0 ? (
+                        `${productosDisponiblesParaEstaEtapa} productos`
                       ) : (
                         'Pendiente'
                       )}
@@ -533,7 +534,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                       className={`${
                         estaCompletada 
                           ? 'text-green-400' 
-                          : hayProductosEnEsteEstado 
+                          : productosDisponiblesParaEstaEtapa > 0
                             ? 'text-yellow-400' 
                             : 'text-gray-300'
                       } transition-colors`} 
