@@ -30,11 +30,11 @@ export const Sidebar: React.FC = () => {
 
   const menuItems: MenuItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, href: '/' },
-    { id: 'productos', label: 'Productos', icon: Package, href: '/productos' },
     { id: 'registro', label: 'Nuevo Pedido', icon: Plus, href: '/registro' },
+    { id: 'lotes', label: 'Gestión de Lotes', icon: Package, href: '/lotes' },
+    { id: 'productos', label: 'Productos', icon: Package, href: '/productos' },
     // { id: 'trazabilidad', label: 'Historial Producto', icon: History, href: '/trazabilidad' },
     { id: 'scanner', label: 'Escanear QR', icon: Scan, href: '/scanner' },
-    { id: 'lotes', label: 'Gestión de Lotes', icon: Package, href: '/lotes' },
   ];
 
   return (

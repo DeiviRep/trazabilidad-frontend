@@ -216,36 +216,51 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
   const getNextEtapa = (lote: Lote): keyof typeof ETAPAS_FLUJO => {
     const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
     
-    // Para las etapas dinámicas, verificamos si hay productos disponibles para esa etapa
-    const productosNacionalizados = lote.productos.filter(p => p.estado === 'NACIONALIZADO');
-    const productosEnDistribucion = lote.productos.filter(p => p.estado === 'EN_DISTRIBUCION');
-    
-    // Si hay productos nacionalizados, permitir distribución
-    if (productosNacionalizados.length > 0) {
-      return 'DISTRIBUCION';
+    // Buscar la primera etapa donde hay productos disponibles para procesar
+    for (const etapa of etapas) {
+      const productosDisponibles = getProductosDisponiblesParaEtapa(etapa, lote);
+      if (productosDisponibles.length > 0) {
+        return etapa;
+      }
     }
     
-    // Si hay productos en distribución, permitir venta
-    if (productosEnDistribucion.length > 0) {
-      return 'PRODUCTO_ADQUIRIDO';
-    }
+    // Si no hay productos disponibles en ninguna etapa, retornar la última
+    return etapas[etapas.length - 1];
+  };
+
+  const getProductosDisponiblesParaEtapa = (etapa: keyof typeof ETAPAS_FLUJO, lote: Lote): ProductoBackend[] => {
+    const config = ETAPAS_FLUJO[etapa];
+    const estadoAnterior = getEstadoAnterior(config.estado);
     
-    // Para etapas no dinámicas, seguir el flujo normal
-    const currentIndex = etapas.findIndex(etapa => ETAPAS_FLUJO[etapa].estado === lote.estado);
-    return etapas[currentIndex + 1] || etapas[etapas.length - 1];
+    // Para cada etapa, buscar productos que estén en el estado inmediato anterior
+    return lote.productos.filter(p => p.estado === estadoAnterior);
+  };
+
+  const getEstadoAnterior = (estado: EstadoEvento): EstadoEvento => {
+    const flujoEstados: Record<EstadoEvento, EstadoEvento> = {
+      'EMBARCADO': 'REGISTRADO',
+      'DESEMBARCADO': 'EMBARCADO',
+      'NACIONALIZADO': 'DESEMBARCADO',
+      'EN_DISTRIBUCION': 'NACIONALIZADO',
+      'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION',
+      'REGISTRADO': 'REGISTRADO' // Estado inicial
+    };
+    return flujoEstados[estado];
   };
 
   const getProductosDisponiblesPorEtapa = (etapa: keyof typeof ETAPAS_FLUJO): ProductoBackend[] => {
     if (!loteSeleccionado) return [];
+    return getProductosDisponiblesParaEtapa(etapa, loteSeleccionado);
+  };
+
+  const getEtapasDisponibles = (): Array<keyof typeof ETAPAS_FLUJO> => {
+    if (!loteSeleccionado) return [];
     
-    switch (etapa) {
-      case 'DISTRIBUCION':
-        return loteSeleccionado.productos.filter(p => p.estado === 'NACIONALIZADO');
-      case 'PRODUCTO_ADQUIRIDO':
-        return loteSeleccionado.productos.filter(p => p.estado === 'EN_DISTRIBUCION');
-      default:
-        return loteSeleccionado.productos;
-    }
+    const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
+    return etapas.filter(etapa => {
+      const productosDisponibles = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado);
+      return productosDisponibles.length > 0;
+    });
   };
 
   const handleSubmit = async (formData: Partial<EventFormData>): Promise<void> => {
@@ -382,6 +397,46 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
 
   const etapaConfig = ETAPAS_FLUJO[etapaActual];
   const productosDisponibles = getProductosDisponiblesPorEtapa(etapaActual);
+  const etapasDisponibles = getEtapasDisponibles();
+
+  const EtapaSelector: React.FC = () => {
+    if (etapasDisponibles.length <= 1) return null;
+
+    return (
+      <div className="bg-blue-50 rounded-lg p-4 mb-6">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Seleccionar Etapa a Procesar</h4>
+        <div className="flex flex-wrap gap-2">
+          {etapasDisponibles.map((etapa) => {
+            const config = ETAPAS_FLUJO[etapa];
+            const Icon = config.icon;
+            const productosCount = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado!).length;
+            const isSelected = etapa === etapaActual;
+
+            return (
+              <button
+                key={etapa}
+                type="button"
+                onClick={() => setEtapaActual(etapa)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  isSelected
+                    ? `bg-${config.color}-600 text-white shadow-md`
+                    : `bg-white text-gray-700 border-2 border-gray-200 hover:border-${config.color}-300`
+                }`}
+              >
+                <Icon size={18} />
+                <span>{config.titulo}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  isSelected ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {productosCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const ProgressIndicator: React.FC = () => {
     const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
@@ -424,14 +479,14 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                     }`}>
                       {config.titulo}
                     </span>
-                    <span className={`text-xs ${
+                    {/* <span className={`text-xs ${
                       esEtapaActiva ? 'text-gray-600' : hayProductosEnEsteEstado ? 'text-gray-500' : 'text-gray-400'
                     }`}>
                       {config.esDinamico && cantidadEnEsteEstado > 0 
                         ? `${cantidadEnEsteEstado} productos` 
                         : config.descripcion
                       }
-                    </span>
+                    </span> */}
                   </div>
                 </div>
                 {index < etapas.length - 1 && (
@@ -845,6 +900,9 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       {/* Formulario de siguiente evento */}
       {productosDisponibles.length > 0 ? (
         <div className="bg-white rounded-lg shadow-md p-6">
+          {/* Selector de etapas */}
+          <EtapaSelector />
+          
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
               <div className={`p-3 rounded-xl bg-${etapaConfig.color}-50 shadow-sm`}>
@@ -863,6 +921,17 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
             </div>
           </div>
           <EventForm />
+        </div>
+      ) : etapasDisponibles.length > 0 ? (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="text-center py-8">
+            <Package className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Cambiar Etapa</h2>
+            <p className="text-gray-600 mb-6">
+              No hay productos disponibles para la etapa actual, pero hay otras etapas con productos pendientes.
+            </p>
+            <EtapaSelector />
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md p-6">
