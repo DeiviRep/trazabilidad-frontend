@@ -81,6 +81,14 @@ interface Params {
 }
 
 const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
+  REGISTRO: {
+    titulo: "Registro",
+    estado: 'REGISTRADO',
+    color: 'blue',
+    icon: Box,
+    descripcion: "Productos registrados en el sistema",
+    eventoUrlApi: 'REGISTRO'
+  },
   EMBARQUE: {
     titulo: "Embarque",
     estado: 'EMBARCADO',
@@ -243,7 +251,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       'NACIONALIZADO': 'DESEMBARCADO',
       'EN_DISTRIBUCION': 'NACIONALIZADO',
       'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION',
-      'REGISTRADO': 'REGISTRADO' // Estado inicial
+      'REGISTRADO': 'EMBARCADO' // Estado inicial
     };
     return flujoEstados[estado];
   };
@@ -934,7 +942,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       </div>
 
       {/* Estadísticas de productos */}
-      <EstadisticasLote />
+      {/* <EstadisticasLote /> */}
 
       {/* Indicador de progreso */}
       <div className="bg-white rounded-lg shadow-md p-6">
