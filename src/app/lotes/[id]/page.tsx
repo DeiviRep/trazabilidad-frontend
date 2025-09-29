@@ -445,6 +445,16 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       return acc;
     }, {} as Record<EstadoEvento, number>);
 
+    // Determinar qué etapas están completadas (todos los productos pasaron)
+    const ordenEstados: EstadoEvento[] = ['REGISTRADO', 'EMBARCADO', 'DESEMBARCADO', 'NACIONALIZADO', 'EN_DISTRIBUCION', 'PRODUCTO_ADQUIRIDO'];
+    const etapaCompletada = (estado: EstadoEvento): boolean => {
+      const indiceEstado = ordenEstados.indexOf(estado);
+      // Una etapa está completada si NO hay productos en ese estado Y hay productos en estados superiores
+      const hayProductosEnEstado = (estadosProductos[estado] || 0) > 0;
+      const hayProductosEnEstadosSuperiores = ordenEstados.slice(indiceEstado + 1).some(e => (estadosProductos[e] || 0) > 0);
+      return !hayProductosEnEstado && hayProductosEnEstadosSuperiores;
+    };
+
     return (
       <div className="mb-8 overflow-x-auto">
         <div className="flex items-center space-x-2 min-w-max pb-4">
@@ -454,45 +464,79 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
             const cantidadEnEsteEstado = estadosProductos[config.estado] || 0;
             const hayProductosEnEsteEstado = cantidadEnEsteEstado > 0;
             const esEtapaActiva = etapa === etapaActual;
+            const estaCompletada = etapaCompletada(config.estado);
 
             return (
               <div key={etapa} className="flex items-center">
                 <div className={`flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
                   esEtapaActiva 
                     ? `bg-${config.color}-50 border-${config.color}-200 shadow-md` 
-                    : hayProductosEnEsteEstado 
-                      ? 'bg-gray-100 border-gray-300 shadow-sm' 
-                      : 'bg-gray-50 border-gray-200'
+                    : estaCompletada
+                      ? 'bg-green-50 border-green-200 shadow-sm'
+                      : hayProductosEnEsteEstado 
+                        ? 'bg-yellow-50 border-yellow-200 shadow-sm' 
+                        : 'bg-gray-50 border-gray-200'
                 }`}>
                   <div className={`p-2 rounded-lg transition-all ${
                     esEtapaActiva 
                       ? `bg-white text-${config.color}-600 shadow-sm` 
-                      : hayProductosEnEsteEstado 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-gray-200 text-gray-400'
+                      : estaCompletada
+                        ? 'bg-green-500 text-white shadow-sm'
+                        : hayProductosEnEsteEstado 
+                          ? 'bg-yellow-400 text-white' 
+                          : 'bg-gray-200 text-gray-400'
                   }`}>
-                    {hayProductosEnEsteEstado && !esEtapaActiva ? <CheckCircle size={18} /> : <Icon size={18} />}
+                    {estaCompletada ? (
+                      <CheckCircle size={18} className="animate-pulse" />
+                    ) : hayProductosEnEsteEstado && !esEtapaActiva ? (
+                      <Icon size={18} />
+                    ) : (
+                      <Icon size={18} />
+                    )}
                   </div>
                   <div>
                     <span className={`font-semibold text-sm block ${
-                      esEtapaActiva ? `text-${config.color}-700` : hayProductosEnEsteEstado ? 'text-gray-700' : 'text-gray-400'
+                      esEtapaActiva 
+                        ? `text-${config.color}-700` 
+                        : estaCompletada 
+                          ? 'text-green-700' 
+                          : hayProductosEnEsteEstado 
+                            ? 'text-yellow-700' 
+                            : 'text-gray-400'
                     }`}>
                       {config.titulo}
                     </span>
-                    {/* <span className={`text-xs ${
-                      esEtapaActiva ? 'text-gray-600' : hayProductosEnEsteEstado ? 'text-gray-500' : 'text-gray-400'
+                    <span className={`text-xs ${
+                      esEtapaActiva 
+                        ? 'text-gray-600' 
+                        : estaCompletada 
+                          ? 'text-green-600 font-medium' 
+                          : hayProductosEnEsteEstado 
+                            ? 'text-yellow-600' 
+                            : 'text-gray-400'
                     }`}>
-                      {config.esDinamico && cantidadEnEsteEstado > 0 
-                        ? `${cantidadEnEsteEstado} productos` 
-                        : config.descripcion
-                      }
-                    </span> */}
+                      {estaCompletada ? (
+                        '✓ Completado'
+                      ) : config.esDinamico && cantidadEnEsteEstado > 0 ? (
+                        `${cantidadEnEsteEstado} productos`
+                      ) : hayProductosEnEsteEstado ? (
+                        `${cantidadEnEsteEstado} en proceso`
+                      ) : (
+                        'Pendiente'
+                      )}
+                    </span>
                   </div>
                 </div>
                 {index < etapas.length - 1 && (
                   <div className="flex items-center mx-3">
                     <ChevronRight 
-                      className={`${hayProductosEnEsteEstado ? 'text-green-400' : 'text-gray-300'} transition-colors`} 
+                      className={`${
+                        estaCompletada 
+                          ? 'text-green-400' 
+                          : hayProductosEnEsteEstado 
+                            ? 'text-yellow-400' 
+                            : 'text-gray-300'
+                      } transition-colors`} 
                       size={20} 
                     />
                   </div>
