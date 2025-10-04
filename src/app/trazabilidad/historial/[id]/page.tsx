@@ -78,12 +78,8 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
         <h2 className="text-2xl font-bold text-gray-900">Trazabilidad del Producto</h2>
         <div className="flex space-x-2">
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Exportar</span>
-          </button>
-          <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
-            <QrCode className="w-4 h-4" />
-            <span>Ver QR</span>
+            {/* <Download className="w-4 h-4" />
+            <span>Exportar</span> */}
           </button>
         </div>
       </div>
