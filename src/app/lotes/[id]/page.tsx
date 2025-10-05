@@ -2,26 +2,13 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Package, Truck, Ship, CheckCircle, ChevronRight, MapPin, Box, Calendar, User, ShoppingCart } from 'lucide-react';
+import { Package, Truck, Ship, CheckCircle, ChevronRight, MapPin, Box, Calendar, ShoppingCart } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 import { useMap } from '@/hooks/useMap';
 import { EventoTipoDtoUrlApi, EventoPayload } from '@/services/typesDto';
 
 type EstadoEvento = 'REGISTRADO' | 'EMBARCADO' | 'DESEMBARCADO' | 'NACIONALIZADO' | 'EN_DISTRIBUCION' | 'PRODUCTO_ADQUIRIDO';
-type ColorName = 'blue' | 'orange' | 'cyan' | 'green' | 'purple' | 'pink';
 
-interface Evento {
-  tipo: EstadoEvento;
-  fecha: string;
-  punto: string;
-  coordenadas: [number, number];
-  contenedor?: string;
-  dim?: string;
-  valorCIF?: number;
-  totalPagado?: number;
-}
-
-// Nueva interface para los datos del backend
 interface ProductoBackend {
   lote: string;
   uuidLote: string;
@@ -49,14 +36,19 @@ interface Lote {
   estado: EstadoEvento;
   url: string;
   fechaCreacion: string;
-  eventos: Evento[];
+  eventos: any[];
   productos: ProductoBackend[];
 }
 
 interface EtapaConfig {
   titulo: string;
   estado: EstadoEvento;
-  color: ColorName;
+  bgColor: string;
+  bgColorLight: string;
+  borderColor: string;
+  textColor: string;
+  textColorDark: string;
+  hoverBorderColor: string;
   icon: React.ComponentType<{ className?: string; size?: number }>;
   descripcion: string;
   eventoUrlApi: EventoTipoDtoUrlApi;
@@ -80,11 +72,17 @@ interface Params {
   id: string
 }
 
+// ✅ COLORES FIJOS - No dinámicos
 const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
   REGISTRO: {
     titulo: "Registro",
     estado: 'REGISTRADO',
-    color: 'blue',
+    bgColor: 'bg-indigo-600',
+    bgColorLight: 'bg-indigo-50',
+    borderColor: 'border-indigo-200',
+    textColor: 'text-indigo-600',
+    textColorDark: 'text-indigo-700',
+    hoverBorderColor: 'hover:border-indigo-300',
     icon: Box,
     descripcion: "Productos registrados en el sistema",
     eventoUrlApi: 'REGISTRO'
@@ -92,7 +90,12 @@ const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
   EMBARQUE: {
     titulo: "Embarque",
     estado: 'EMBARCADO',
-    color: 'orange',
+    bgColor: 'bg-orange-600',
+    bgColorLight: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    textColor: 'text-orange-600',
+    textColorDark: 'text-orange-700',
+    hoverBorderColor: 'hover:border-orange-300',
     icon: Truck,
     descripcion: "Registra información del transporte y contenedor para todo el lote",
     eventoUrlApi: 'EMBARQUE'
@@ -100,7 +103,12 @@ const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
   DESEMBARQUE: {
     titulo: "Desembarque",
     estado: 'DESEMBARCADO',
-    color: 'cyan',
+    bgColor: 'bg-cyan-600',
+    bgColorLight: 'bg-cyan-50',
+    borderColor: 'border-cyan-200',
+    textColor: 'text-cyan-600',
+    textColorDark: 'text-cyan-700',
+    hoverBorderColor: 'hover:border-cyan-300',
     icon: Ship,
     descripcion: "Verifica llegada al puerto extranjero e integridad del lote completo",
     eventoUrlApi: 'DESEMBARQUE'
@@ -108,7 +116,12 @@ const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
   NACIONALIZACION: {
     titulo: "Nacionalización",
     estado: 'NACIONALIZADO',
-    color: 'green',
+    bgColor: 'bg-green-600',
+    bgColorLight: 'bg-green-50',
+    borderColor: 'border-green-200',
+    textColor: 'text-green-600',
+    textColorDark: 'text-green-700',
+    hoverBorderColor: 'hover:border-green-300',
     icon: CheckCircle,
     descripcion: "Procesa documentos aduaneros y pago de impuestos para el lote",
     eventoUrlApi: 'NACIONALIZACION'
@@ -116,7 +129,12 @@ const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
   DISTRIBUCION: {
     titulo: "Distribución",
     estado: 'EN_DISTRIBUCION',
-    color: 'purple',
+    bgColor: 'bg-purple-600',
+    bgColorLight: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+    textColor: 'text-purple-600',
+    textColorDark: 'text-purple-700',
+    hoverBorderColor: 'hover:border-purple-300',
     icon: Package,
     descripcion: "Distribuye productos seleccionados a comerciantes específicos",
     eventoUrlApi: 'DISTRIBUCION',
@@ -125,12 +143,27 @@ const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
   PRODUCTO_ADQUIRIDO: {
     titulo: "Producto Adquirido",
     estado: 'PRODUCTO_ADQUIRIDO',
-    color: 'pink',
+    bgColor: 'bg-blue-600',
+    bgColorLight: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    textColor: 'text-blue-600',
+    textColorDark: 'text-blue-700',
+    hoverBorderColor: 'hover:border-blue-300',
     icon: ShoppingCart,
     descripcion: "Marca productos específicos como vendidos/adquiridos",
     eventoUrlApi: 'ADQUIRIDO',
     esDinamico: true
   }
+};
+
+// ✅ MAPEO DE COLORES PARA ESTADÍSTICAS
+const COLOR_MAP: Record<EstadoEvento, { bg: string; text: string; textBold: string }> = {
+  REGISTRADO: { bg: 'bg-indigo-50', text: 'text-indigo-600', textBold: 'text-indigo-800' },
+  EMBARCADO: { bg: 'bg-orange-50', text: 'text-orange-600', textBold: 'text-orange-800' },
+  DESEMBARCADO: { bg: 'bg-cyan-50', text: 'text-cyan-600', textBold: 'text-cyan-800' },
+  NACIONALIZADO: { bg: 'bg-green-50', text: 'text-green-600', textBold: 'text-green-800' },
+  EN_DISTRIBUCION: { bg: 'bg-purple-50', text: 'text-purple-600', textBold: 'text-purple-800' },
+  PRODUCTO_ADQUIRIDO: { bg: 'bg-blue-50', text: 'text-blue-600', textBold: 'text-blue-800' }
 };
 
 export default function LoteIndividualPage({ params }: { params: Promise<Params> }) {
@@ -143,39 +176,19 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Función para transformar los datos del backend a la estructura del lote
   const transformarDatosBackend = (productos: ProductoBackend[]): Lote | null => {
     if (!productos || productos.length === 0) return null;
 
     const primerProducto = productos[0];
-    
-    // Obtener todas las marcas y modelos únicos
     const marcasUnicas = [...new Set(productos.map(p => p.marca))];
     const modelosUnicos = [...new Set(productos.map(p => p.modelo))];
     
-    // Determinar el estado más avanzado de todos los productos
     const ordenEstados: EstadoEvento[] = ['REGISTRADO', 'EMBARCADO', 'DESEMBARCADO', 'NACIONALIZADO', 'EN_DISTRIBUCION', 'PRODUCTO_ADQUIRIDO'];
     const estadoMasAvanzado = productos.reduce((estadoMax, producto) => {
       const indiceActual = ordenEstados.indexOf(producto.estado);
       const indiceMax = ordenEstados.indexOf(estadoMax);
       return indiceActual > indiceMax ? producto.estado : estadoMax;
     }, 'REGISTRADO' as EstadoEvento);
-
-    // Combinar todos los eventos únicos de todos los productos
-    const eventosUnicos = new Map<string, Evento>();
-    productos.forEach(producto => {
-      producto.eventos.forEach(evento => {
-        const key = `${evento.tipo}-${evento.fecha}-${evento.puntoControl}`;
-        if (!eventosUnicos.has(key)) {
-          eventosUnicos.set(key, {
-            tipo: evento.tipo,
-            fecha: evento.fecha,
-            punto: evento.puntoControl,
-            coordenadas: evento.coordenadas
-          });
-        }
-      });
-    });
 
     return {
       id: primerProducto.uuidLote,
@@ -186,9 +199,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       estado: estadoMasAvanzado,
       url: primerProducto.urlLote,
       fechaCreacion: primerProducto.fechaCreacion,
-      eventos: Array.from(eventosUnicos.values()).sort((a, b) => 
-        new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
-      ),
+      eventos: [],
       productos: productos
     };
   };
@@ -198,7 +209,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       setLoading(true);
       setError(null);
       const data = await TrazabilidadAPI.listarPorLote(idLote);
-      console.log('Datos del backend:', data);
       
       const loteTransformado = transformarDatosBackend(data);
       if (loteTransformado) {
@@ -224,7 +234,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
   const getNextEtapa = (lote: Lote): keyof typeof ETAPAS_FLUJO => {
     const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
     
-    // Buscar la primera etapa donde hay productos disponibles para procesar
     for (const etapa of etapas) {
       const productosDisponibles = getProductosDisponiblesParaEtapa(etapa, lote);
       if (productosDisponibles.length > 0) {
@@ -232,15 +241,12 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       }
     }
     
-    // Si no hay productos disponibles en ninguna etapa, retornar la última
     return etapas[etapas.length - 1];
   };
 
   const getProductosDisponiblesParaEtapa = (etapa: keyof typeof ETAPAS_FLUJO, lote: Lote): ProductoBackend[] => {
     const config = ETAPAS_FLUJO[etapa];
     const estadoAnterior = getEstadoAnterior(config.estado);
-    
-    // Para cada etapa, buscar productos que estén en el estado inmediato anterior
     return lote.productos.filter(p => p.estado === estadoAnterior);
   };
 
@@ -251,7 +257,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       'NACIONALIZADO': 'DESEMBARCADO',
       'EN_DISTRIBUCION': 'NACIONALIZADO',
       'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION',
-      'REGISTRADO': 'EMBARCADO' // Estado inicial
+      'REGISTRADO': 'EMBARCADO'
     };
     return flujoEstados[estado];
   };
@@ -261,16 +267,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
     return getProductosDisponiblesParaEtapa(etapa, loteSeleccionado);
   };
 
-  const getEtapasDisponibles = (): Array<keyof typeof ETAPAS_FLUJO> => {
-    if (!loteSeleccionado) return [];
-    
-    const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
-    return etapas.filter(etapa => {
-      const productosDisponibles = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado);
-      return productosDisponibles.length > 0;
-    });
-  };
-
   const handleSubmit = async (formData: Partial<EventFormData>): Promise<void> => {
     if (!loteSeleccionado || !loteSeleccionado.productos) return;
 
@@ -278,14 +274,12 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       setSubmitting(true);
       const etapaConfig = ETAPAS_FLUJO[etapaActual];
       
-      // Crear el payload base
       const basePayload: Omit<EventoPayload, 'id'> = {
         latitud: formData.latitud || '',
         longitud: formData.longitud || '',
         puntoControl: formData.punto || '',
       };
 
-      // Agregar campos específicos según la etapa
       switch (etapaActual) {
         case 'EMBARQUE':
           basePayload.nroContenedor = formData.contenedor;
@@ -308,34 +302,26 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
           break;
       }
 
-      // Determinar qué productos procesar
       let productosAProcesar: ProductoBackend[];
       
       if (etapaConfig.esDinamico && formData.productosSeleccionados) {
-        // Para etapas dinámicas, usar solo los productos seleccionados
         productosAProcesar = loteSeleccionado.productos.filter(p => 
           formData.productosSeleccionados!.includes(p.id)
         );
       } else {
-        // Para etapas no dinámicas, procesar todos los productos del lote
         productosAProcesar = loteSeleccionado.productos;
       }
 
-      // Crear payloads para cada producto seleccionado
       const eventosPayload: EventoPayload[] = productosAProcesar.map(producto => ({
         ...basePayload,
         id: producto.id
       }));
-
-      console.log('Procesando productos:', eventosPayload);
       
-      // Llamar a la API para eventos por lote
       await TrazabilidadAPI.eventoLote({
         eventoUrlApi: etapaConfig.eventoUrlApi,
         body: eventosPayload 
       });
 
-      // Recargar los datos del lote
       await run();
 
     } catch (error) {
@@ -346,7 +332,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -358,7 +343,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -385,7 +369,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
     );
   }
 
-  // No data state
   if (!loteSeleccionado) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -405,47 +388,8 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
 
   const etapaConfig = ETAPAS_FLUJO[etapaActual];
   const productosDisponibles = getProductosDisponiblesPorEtapa(etapaActual);
-  const etapasDisponibles = getEtapasDisponibles();
 
-  const EtapaSelector: React.FC = () => {
-    if (etapasDisponibles.length <= 1) return null;
-
-    return (
-      <div className="bg-blue-50 rounded-lg p-4 mb-6">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Seleccionar Etapa a Procesar</h4>
-        <div className="flex flex-wrap gap-2">
-          {etapasDisponibles.map((etapa) => {
-            const config = ETAPAS_FLUJO[etapa];
-            const Icon = config.icon;
-            const productosCount = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado!).length;
-            const isSelected = etapa === etapaActual;
-
-            return (
-              <button
-                key={etapa}
-                type="button"
-                onClick={() => setEtapaActual(etapa)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  isSelected
-                    ? `bg-${config.color}-600 text-white shadow-md`
-                    : `bg-white text-gray-700 border-2 border-gray-200 hover:border-${config.color}-300`
-                }`}
-              >
-                <Icon size={18} />
-                <span>{config.titulo}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  isSelected ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {productosCount}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
+  // ✅ COMPONENTE PROGRESO CON CLICK
   const ProgressIndicator: React.FC = () => {
     const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
     const estadosProductos = loteSeleccionado.productos.reduce((acc, producto) => {
@@ -453,54 +397,42 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       return acc;
     }, {} as Record<EstadoEvento, number>);
 
-    // Determinar qué etapas están completadas (todos los productos pasaron)
-    const ordenEstados: EstadoEvento[] = ['REGISTRADO', 'EMBARCADO', 'DESEMBARCADO', 'NACIONALIZADO', 'EN_DISTRIBUCION', 'PRODUCTO_ADQUIRIDO'];
-    const etapaCompletada = (estado: EstadoEvento): boolean => {
-      const indiceEstado = ordenEstados.indexOf(estado);
-      // Una etapa está completada si TODOS los productos están en estados iguales o superiores a este
-      // Es decir, si ningún producto está en estados anteriores a este
-      const productosEnEstadosAnteriores = ordenEstados.slice(0, indiceEstado).some(e => (estadosProductos[e] || 0) > 0);
-      const hayProductosEnEsteMismoEstadoOSuperior = ordenEstados.slice(indiceEstado).some(e => (estadosProductos[e] || 0) > 0);
-      // Completada si no hay productos en estados anteriores Y hay productos que llegaron a este estado o lo superaron
-      return !productosEnEstadosAnteriores && hayProductosEnEsteMismoEstadoOSuperior;
-    };
-
     return (
       <div className="mb-8 overflow-x-auto">
         <div className="flex items-center space-x-2 min-w-max pb-4">
           {etapas.map((etapa, index) => {
             const config = ETAPAS_FLUJO[etapa];
             const Icon = config.icon;
-            const cantidadEnEsteEstado = estadosProductos[config.estado] || 0;
-            const hayProductosEnEsteEstado = cantidadEnEsteEstado > 0;
-            const esEtapaActiva = etapa === etapaActual;
-            const estaCompletada = etapaCompletada(config.estado);
-            
-            // Obtener la cantidad de productos DISPONIBLES para procesar en esta etapa
             const productosDisponiblesParaEstaEtapa = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado).length;
+            const esEtapaActiva = etapa === etapaActual;
+            const hayProductosPendientes = productosDisponiblesParaEstaEtapa > 0;
 
             return (
               <div key={etapa} className="flex items-center">
-                <div className={`flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
-                  esEtapaActiva 
-                    ? `bg-${config.color}-50 border-${config.color}-200 shadow-md` 
-                    : estaCompletada
-                      ? 'bg-green-50 border-green-200 shadow-sm'
-                      : productosDisponiblesParaEstaEtapa > 0
-                        ? 'bg-yellow-50 border-yellow-200 shadow-sm' 
-                        : 'bg-gray-50 border-gray-200'
-                }`}>
+                <button
+                  onClick={() => {
+                    if (hayProductosPendientes) {
+                      setEtapaActual(etapa);
+                    }
+                  }}
+                  disabled={!hayProductosPendientes}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
+                    esEtapaActiva 
+                      ? `${config.bgColorLight} ${config.borderColor} shadow-md` 
+                      : hayProductosPendientes
+                        ? 'bg-yellow-50 border-yellow-200 shadow-sm hover:shadow-md cursor-pointer' 
+                        : 'bg-green-50 border-green-200 shadow-sm cursor-not-allowed'
+                  }`}
+                >
                   <div className={`p-2 rounded-lg transition-all ${
                     esEtapaActiva 
-                      ? `bg-white text-${config.color}-600 shadow-sm` 
-                      : estaCompletada
-                        ? 'bg-green-500 text-white shadow-sm'
-                        : productosDisponiblesParaEstaEtapa > 0
-                          ? 'bg-yellow-400 text-white' 
-                          : 'bg-gray-200 text-gray-400'
+                      ? `bg-white ${config.textColor} shadow-sm` 
+                      : hayProductosPendientes
+                        ? 'bg-yellow-400 text-white' 
+                        : 'bg-green-500 text-white'
                   }`}>
-                    {estaCompletada ? (
-                      <CheckCircle size={18} className="animate-pulse" />
+                    {!hayProductosPendientes && !esEtapaActiva ? (
+                      <CheckCircle size={18} />
                     ) : (
                       <Icon size={18} />
                     )}
@@ -508,43 +440,39 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                   <div>
                     <span className={`font-semibold text-sm block ${
                       esEtapaActiva 
-                        ? `text-${config.color}-700` 
-                        : estaCompletada 
-                          ? 'text-green-700' 
-                          : productosDisponiblesParaEstaEtapa > 0
-                            ? 'text-yellow-700' 
-                            : 'text-gray-400'
+                        ? config.textColorDark
+                        : hayProductosPendientes
+                          ? 'text-yellow-700' 
+                          : 'text-green-700'
                     }`}>
                       {config.titulo}
                     </span>
                     <span className={`text-xs ${
                       esEtapaActiva 
                         ? 'text-gray-600' 
-                        : estaCompletada 
-                          ? 'text-green-600 font-medium' 
-                          : productosDisponiblesParaEstaEtapa > 0
-                            ? 'text-yellow-600' 
-                            : 'text-gray-400'
+                        : hayProductosPendientes
+                          ? 'text-yellow-600' 
+                          : 'text-green-600 font-medium'
                     }`}>
-                      {estaCompletada ? (
+                      {!hayProductosPendientes && !esEtapaActiva ? (
                         '✓ Completado'
-                      ) : productosDisponiblesParaEstaEtapa > 0 ? (
-                        `${productosDisponiblesParaEstaEtapa} productos`
+                      ) : hayProductosPendientes ? (
+                        `${productosDisponiblesParaEstaEtapa} PENDIENTES`
+                      ) : esEtapaActiva ? (
+                        'En proceso'
                       ) : (
                         'Pendiente'
                       )}
                     </span>
                   </div>
-                </div>
+                </button>
                 {index < etapas.length - 1 && (
                   <div className="flex items-center mx-3">
                     <ChevronRight 
                       className={`${
-                        estaCompletada 
+                        !hayProductosPendientes
                           ? 'text-green-400' 
-                          : productosDisponiblesParaEstaEtapa > 0
-                            ? 'text-yellow-400' 
-                            : 'text-gray-300'
+                          : 'text-gray-300'
                       } transition-colors`} 
                       size={20} 
                     />
@@ -676,7 +604,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
 
     return (
       <form onSubmit={handleFormSubmit} className="space-y-6">
-        {/* Selector de productos para etapas dinámicas */}
         {etapaConfig.esDinamico && productosDisponibles.length > 0 && (
           <div className="bg-gray-50 p-4 rounded-lg">
             <ProductSelector
@@ -837,7 +764,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
           </button>
           <button
             type="submit"
-            className={`px-4 py-3 bg-${etapaConfig.color}-600 text-white rounded-lg hover:bg-${etapaConfig.color}-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`px-4 py-3 ${etapaConfig.bgColor} text-white rounded-lg hover:opacity-90 transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
             disabled={submitting || (etapaConfig.esDinamico && formData.productosSeleccionados.length === 0)}
           >
             {submitting ? (
@@ -868,27 +795,42 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
       return acc;
     }, {} as Record<EstadoEvento, number>);
 
-    const estadosOrdenados: { estado: EstadoEvento; label: string; color: string }[] = [
-      { estado: 'REGISTRADO', label: 'Registrados', color: 'blue' },
-      { estado: 'EMBARCADO', label: 'Embarcados', color: 'orange' },
-      { estado: 'DESEMBARCADO', label: 'Desembarcados', color: 'cyan' },
-      { estado: 'NACIONALIZADO', label: 'Nacionalizados', color: 'green' },
-      { estado: 'EN_DISTRIBUCION', label: 'En Distribución', color: 'purple' },
-      { estado: 'PRODUCTO_ADQUIRIDO', label: 'Vendidos', color: 'pink' }
+    const estadosOrdenados: { estado: EstadoEvento; label: string }[] = [
+      { estado: 'REGISTRADO', label: 'Registrados' },
+      { estado: 'EMBARCADO', label: 'Embarcados' },
+      { estado: 'DESEMBARCADO', label: 'Desembarcados' },
+      { estado: 'NACIONALIZADO', label: 'Nacionalizados' },
+      { estado: 'EN_DISTRIBUCION', label: 'En Distribución' },
+      { estado: 'PRODUCTO_ADQUIRIDO', label: 'Vendidos' }
     ];
+
+    const estadosConProductos = estadosOrdenados.filter(({ estado }) => {
+      const cantidad = estadosProductos[estado] || 0;
+      return cantidad > 0;
+    });
+
+    if (estadosConProductos.length === 0) {
+      return (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de los Productos</h3>
+          <p className="text-gray-500 text-center py-8">No hay productos en este lote</p>
+        </div>
+      );
+    }
 
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de los Productos</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {estadosOrdenados.map(({ estado, label, color }) => {
+          {estadosConProductos.map(({ estado, label }) => {
             const cantidad = estadosProductos[estado] || 0;
+            const colors = COLOR_MAP[estado];
             return (
-              <div key={estado} className={`bg-${color}-50 p-4 rounded-lg text-center`}>
-                <div className={`text-2xl font-bold text-${color}-800`}>
+              <div key={estado} className={`${colors.bg} p-4 rounded-lg text-center`}>
+                <div className={`text-2xl font-bold ${colors.textBold}`}>
                   {cantidad}
                 </div>
-                <div className={`text-sm text-${color}-600 font-medium`}>
+                <div className={`text-sm ${colors.text} font-medium`}>
                   {label}
                 </div>
               </div>
@@ -901,7 +843,6 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
 
   return (
     <div className="space-y-6">
-      {/* Header del lote */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
           <div className="flex items-start space-x-4">
@@ -941,25 +882,20 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
         </div>
       </div>
 
-      {/* Estadísticas de productos */}
-      {/* <EstadisticasLote /> */}
+      <EstadisticasLote />
 
-      {/* Indicador de progreso */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Progreso del Proceso</h3>
+        <p className="text-sm text-gray-600 mb-4">Haz clic en una etapa con productos pendientes para procesarla</p>
         <ProgressIndicator />
       </div>
 
-      {/* Formulario de siguiente evento */}
       {productosDisponibles.length > 0 ? (
         <div className="bg-white rounded-lg shadow-md p-6">
-          {/* Selector de etapas */}
-          <EtapaSelector />
-          
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
-              <div className={`p-3 rounded-xl bg-${etapaConfig.color}-50 shadow-sm`}>
-                <etapaConfig.icon size={32} className={`text-${etapaConfig.color}-600`} />
+              <div className={`p-3 rounded-xl ${etapaConfig.bgColorLight} shadow-sm`}>
+                <etapaConfig.icon size={32} className={etapaConfig.textColor} />
               </div>
               <div>
                 <h2 className="text-2xl font-semibold text-gray-900">Registrar {etapaConfig.titulo}</h2>
@@ -967,7 +903,7 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
                 <div className="text-sm text-blue-600 font-medium mt-2">
                   {etapaConfig.esDinamico 
                     ? `${productosDisponibles.length} productos disponibles para esta etapa`
-                    : `Este evento se aplicará a las ${loteSeleccionado.cantidadProductos} unidades del lote`
+                    : `Este evento se aplicará a todos los productos del lote`
                   }
                 </div>
               </div>
@@ -975,24 +911,12 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
           </div>
           <EventForm />
         </div>
-      ) : etapasDisponibles.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="text-center py-8">
-            <Package className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Cambiar Etapa</h2>
-            <p className="text-gray-600 mb-6">
-              No hay productos disponibles para la etapa actual, pero hay otras etapas con productos pendientes.
-            </p>
-            <EtapaSelector />
-          </div>
-        </div>
       ) : (
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="text-center py-8">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Lote Procesado</h2>
             <p className="text-gray-600 mb-6">
-              No hay productos disponibles para procesar en la etapa actual.
               Todos los productos han completado su proceso correspondiente.
             </p>
             <button
