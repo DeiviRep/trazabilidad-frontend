@@ -244,22 +244,28 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
     return etapas[etapas.length - 1];
   };
 
-  const getProductosDisponiblesParaEtapa = (etapa: keyof typeof ETAPAS_FLUJO, lote: Lote): ProductoBackend[] => {
+  const getProductosDisponiblesParaEtapa = (
+    etapa: keyof typeof ETAPAS_FLUJO,
+    lote: Lote
+  ): ProductoBackend[] => {
     const config = ETAPAS_FLUJO[etapa];
     const estadoAnterior = getEstadoAnterior(config.estado);
+    if (!estadoAnterior) {
+      // Primera etapa: solo mostrar si aún no se ha registrado nada
+      return lote.productos.filter(p => p.estado === 'REGISTRADO');
+    }
     return lote.productos.filter(p => p.estado === estadoAnterior);
   };
 
-  const getEstadoAnterior = (estado: EstadoEvento): EstadoEvento => {
-    const flujoEstados: Record<EstadoEvento, EstadoEvento> = {
+  const getEstadoAnterior = (estado: EstadoEvento): EstadoEvento | null => {
+    const flujoEstados: Partial<Record<EstadoEvento, EstadoEvento>> = {
       'EMBARCADO': 'REGISTRADO',
       'DESEMBARCADO': 'EMBARCADO',
       'NACIONALIZADO': 'DESEMBARCADO',
       'EN_DISTRIBUCION': 'NACIONALIZADO',
-      'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION',
-      'REGISTRADO': 'EMBARCADO'
+      'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION'
     };
-    return flujoEstados[estado];
+    return flujoEstados[estado] || null;
   };
 
   const getProductosDisponiblesPorEtapa = (etapa: keyof typeof ETAPAS_FLUJO): ProductoBackend[] => {
@@ -389,103 +395,127 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
   const etapaConfig = ETAPAS_FLUJO[etapaActual];
   const productosDisponibles = getProductosDisponiblesPorEtapa(etapaActual);
 
+  // ✅ NUEVA LÓGICA DE ESTADO VISUAL DE CADA ETAPA
+const getEstadoEtapaVisual = (
+  etapa: keyof typeof ETAPAS_FLUJO,
+  lote: Lote
+): 'COMPLETADA' | 'ACTIVA' | 'FUTURA' => {
+  const config = ETAPAS_FLUJO[etapa];
+  const estadoActual = config.estado;
+  const estadoAnterior = getEstadoAnterior(estadoActual);
+
+  const productos = lote.productos;
+  const total = productos.length;
+
+  // Orden de flujo para comparar progresión
+  const orden = [
+    'REGISTRADO',
+    'EMBARCADO',
+    'DESEMBARCADO',
+    'NACIONALIZADO',
+    'EN_DISTRIBUCION',
+    'PRODUCTO_ADQUIRIDO'
+  ];
+
+  // Productos que ya alcanzaron o superaron esta etapa
+  const completados = productos.filter(p =>
+    orden.indexOf(p.estado) >= orden.indexOf(estadoActual)
+  ).length;
+
+  // Si todos los productos ya superaron o alcanzaron esta etapa
+  if (completados === total) return 'COMPLETADA';
+
+  // Productos listos para esta etapa (en estado anterior)
+  const disponibles = estadoAnterior
+    ? productos.filter(p => p.estado === estadoAnterior).length
+    : 0;
+
+  // Si hay productos listos para procesar
+  if (disponibles > 0) return 'ACTIVA';
+
+  // Si aún no hay productos en el estado anterior → futura
+  return 'FUTURA';
+};
   // ✅ COMPONENTE PROGRESO CON CLICK
-  const ProgressIndicator: React.FC = () => {
-    const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
-    const estadosProductos = loteSeleccionado.productos.reduce((acc, producto) => {
-      acc[producto.estado] = (acc[producto.estado] || 0) + 1;
-      return acc;
-    }, {} as Record<EstadoEvento, number>);
+const ProgressIndicator: React.FC = () => {
+  const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
 
-    return (
-      <div className="mb-8 overflow-x-auto">
-        <div className="flex items-center space-x-2 min-w-max pb-4">
-          {etapas.map((etapa, index) => {
-            const config = ETAPAS_FLUJO[etapa];
-            const Icon = config.icon;
-            const productosDisponiblesParaEstaEtapa = getProductosDisponiblesParaEtapa(etapa, loteSeleccionado).length;
-            const esEtapaActiva = etapa === etapaActual;
-            const hayProductosPendientes = productosDisponiblesParaEstaEtapa > 0;
+  return (
+    <div className="mb-8 overflow-x-auto">
+      <div className="flex items-center space-x-2 min-w-max pb-4">
+        {etapas.map((etapa, index) => {
+          const config = ETAPAS_FLUJO[etapa];
+          const Icon = config.icon;
+          const estadoVisual = getEstadoEtapaVisual(etapa, loteSeleccionado);
 
-            return (
-              <div key={etapa} className="flex items-center">
-                <button
-                  onClick={() => {
-                    if (hayProductosPendientes) {
-                      setEtapaActual(etapa);
-                    }
-                  }}
-                  disabled={!hayProductosPendientes}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
-                    esEtapaActiva 
-                      ? `${config.bgColorLight} ${config.borderColor} shadow-md` 
-                      : hayProductosPendientes
-                        ? 'bg-yellow-50 border-yellow-200 shadow-sm hover:shadow-md cursor-pointer' 
-                        : 'bg-green-50 border-green-200 shadow-sm cursor-not-allowed'
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg transition-all ${
-                    esEtapaActiva 
-                      ? `bg-white ${config.textColor} shadow-sm` 
-                      : hayProductosPendientes
-                        ? 'bg-yellow-400 text-white' 
-                        : 'bg-green-500 text-white'
-                  }`}>
-                    {!hayProductosPendientes && !esEtapaActiva ? (
-                      <CheckCircle size={18} />
-                    ) : (
-                      <Icon size={18} />
-                    )}
-                  </div>
-                  <div>
-                    <span className={`font-semibold text-sm block ${
-                      esEtapaActiva 
+          const isActiva = estadoVisual === 'ACTIVA';
+          const isCompletada = estadoVisual === 'COMPLETADA';
+          const isFutura = estadoVisual === 'FUTURA';
+
+          return (
+            <div key={etapa} className="flex items-center">
+              <button
+                onClick={() => { if (isActiva) setEtapaActual(etapa); }}
+                disabled={!isActiva}
+                className={`flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
+                  isActiva
+                    ? `${config.bgColorLight} ${config.borderColor} shadow-md cursor-pointer`
+                    : isCompletada
+                      ? 'bg-green-50 border-green-200 shadow-sm cursor-default'
+                      : 'bg-gray-50 border-gray-200 opacity-70 cursor-not-allowed'
+                }`}
+              >
+                <div className={`p-2 rounded-lg transition-all ${
+                  isCompletada
+                    ? 'bg-green-500 text-white'
+                    : isActiva
+                      ? `${config.bgColor} text-white`
+                      : 'bg-gray-300 text-gray-600'
+                }`}>
+                  {isCompletada ? <CheckCircle size={18} /> : <Icon size={18} />}
+                </div>
+
+                <div>
+                  <span className={`font-semibold text-sm block ${
+                    isCompletada
+                      ? 'text-green-700'
+                      : isActiva
                         ? config.textColorDark
-                        : hayProductosPendientes
-                          ? 'text-yellow-700' 
-                          : 'text-green-700'
-                    }`}>
-                      {config.titulo}
-                    </span>
-                    <span className={`text-xs ${
-                      esEtapaActiva 
-                        ? 'text-gray-600' 
-                        : hayProductosPendientes
-                          ? 'text-yellow-600' 
-                          : 'text-green-600 font-medium'
-                    }`}>
-                      {!hayProductosPendientes && !esEtapaActiva ? (
-                        '✓ Completado'
-                      ) : hayProductosPendientes ? (
-                        `${productosDisponiblesParaEstaEtapa} PENDIENTES`
-                      ) : esEtapaActiva ? (
-                        'En proceso'
-                      ) : (
-                        'Pendiente'
-                      )}
-                    </span>
-                  </div>
-                </button>
-                {index < etapas.length - 1 && (
-                  <div className="flex items-center mx-3">
-                    <ChevronRight 
-                      className={`${
-                        !hayProductosPendientes
-                          ? 'text-green-400' 
-                          : 'text-gray-300'
-                      } transition-colors`} 
-                      size={20} 
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+                        : 'text-gray-500'
+                  }`}>
+                    {config.titulo}
+                  </span>
+                  <span className={`text-xs ${
+                    isCompletada
+                      ? 'text-green-600 font-medium'
+                      : isActiva
+                        ? 'text-yellow-700'
+                        : 'text-gray-400'
+                  }`}>
+                    {isCompletada
+                      ? '✓ Completado'
+                      : isActiva
+                        ? 'En proceso'
+                        : 'Pendiente'}
+                  </span>
+                </div>
+              </button>
 
+              {index < etapas.length - 1 && (
+                <div className="flex items-center mx-3">
+                  <ChevronRight
+                    className={isCompletada ? 'text-green-400' : 'text-gray-300'}
+                    size={20}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
   const ProductSelector: React.FC<{ 
     productos: ProductoBackend[], 
     productosSeleccionados: string[], 
