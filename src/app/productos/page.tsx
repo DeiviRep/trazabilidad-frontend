@@ -174,9 +174,6 @@ export default function ProductosPage() {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex space-x-2">
-                      {/* <button className="text-blue-600 hover:text-blue-800 p-1" title="Ver detalles">
-                        <Eye className="w-4 h-4" />
-                      </button> */}
                       <button onClick={() => handleOpenQrModal(lote.id)} className="text-green-600 hover:text-green-800 p-1" title="Ver todos los QR">
                         <QrCode className="w-4 h-4" />
                       </button>

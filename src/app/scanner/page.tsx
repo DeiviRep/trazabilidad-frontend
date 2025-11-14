@@ -228,15 +228,6 @@ export default function ScannerPage() {
                   >
                     Ver Historial Completo
                   </Link>
-                  
-                  {/* {scanResult.producto.uuidLote && (
-                    <Link 
-                      href={`/trazabilidad/lote/${scanResult.producto.uuidLote}`}
-                      className="block w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors text-center border border-gray-300"
-                    >
-                      Ver Lote Completo
-                    </Link>
-                  )} */}
                 </div>
               </div>
             </div>

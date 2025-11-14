@@ -28,16 +28,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex items-center space-x-4">
-          {/* <div className="text-sm text-gray-500">
-            <Clock className="w-4 h-4 inline mr-1" />
-            {new Date().toLocaleTimeString('es-BO', { 
-              hour: '2-digit', 
-              minute: '2-digit',
-              timeZoneName: 'short'
-            })}
-          </div> */}
-          
+        <div className="flex items-center space-x-4">         
           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
