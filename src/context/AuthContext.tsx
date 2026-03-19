@@ -22,19 +22,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
 
   useEffect(() => {
-    const t = Cookies.get('token') || null;
-    const u = Cookies.get('user') ? JSON.parse(Cookies.get('user')!) : null;
-    setToken(t);
-    setUser(u);
+    const tokenStored = Cookies.get('token') || null;
+    const userStored = Cookies.get('user') ? JSON.parse(Cookies.get('user')!) : null;
+    setToken(tokenStored);
+    setUser(userStored);
   }, []);
 
-  const login = (t: string, u?: UserType) => {
-    setToken(t);
-    Cookies.set('token', t);
-    if (u) {
-      setUser(u);
-      Cookies.set('user', JSON.stringify(u));
-    }
+  const login = (token: string, user?: UserType) => {
+    // Guardar en cookies
+    Cookies.set('token', token, { expires: 1 }); // Expira en 1 día
+    Cookies.set('user', JSON.stringify(user), { expires: 1 });
+    
+    // Actualizar estado
+    setToken(token);
+    if (user) setUser(user);
   };
 
   const logout = () => {
