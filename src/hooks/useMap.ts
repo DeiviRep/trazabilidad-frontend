@@ -2,8 +2,13 @@
 
 import { useState } from 'react';
 
+interface Coordenadas {
+  lat: number;
+  lon: number;
+}
+
 export const useMap = () => {
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [coords, setCoords] = useState<Coordenadas | null>(null);
 
   const captureBrowserLocation = () =>
     new Promise<{ lat: number; lon: number }>((resolve, reject) => {

@@ -1,8 +1,5 @@
-export const formatCoords = (ubicacion: string) => {
-  if (!ubicacion) return { lat: 0, lon: 0, label: '-' };
-  const [lat, lon] = ubicacion.split(',').map(Number);
-  return { lat, lon, label: `${lat.toFixed(4)}, ${lon.toFixed(4)}` };
-};
+import { UbicacionTipo } from "@/types/device";
 
-export const cls = (...args: (string | false | null | undefined)[]) =>
-  args.filter(Boolean).join(' ');
+export const delay = (ms: number): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};

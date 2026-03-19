@@ -1,3 +1,4 @@
+// src/app/login/page.tsx
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -18,9 +19,9 @@ export default function LoginPage() {
     try {
       const { access_token, user } = await AuthAPI.login(correo, password);
       login(access_token, user);
-      router.push('/trazabilidad');
+      router.push('/');
     } catch (e:any) {
-      setErr(e?.response?.data?.message || 'Error de autenticación');
+      setErr(e?.message || 'Error de autenticación');
     }
   };
 

@@ -15,7 +15,7 @@ export default function QRModal({ open, onClose, imageUrl }: Props) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+    <div className="fixed inset-0 z-1000 flex items-center justify-center bg-black/30 p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Código QR</h3>
@@ -34,7 +34,7 @@ export default function QRModal({ open, onClose, imageUrl }: Props) {
             </a>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Generando…</p>
+          <p className="text-sm text-gray-500 h-64 w-64 rounded-md">Generando…</p>
         )}
       </div>
     </div>
