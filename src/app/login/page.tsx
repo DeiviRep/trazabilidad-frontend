@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthAPI } from '@/services/api';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { isApiError } from '@/utils/formatters';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -13,17 +14,22 @@ export default function LoginPage() {
   const [err, setErr] = useState<string|null>(null);
   const router = useRouter();
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErr(null);
-    try {
-      const { access_token, user } = await AuthAPI.login(correo, password);
-      login(access_token, user);
-      router.push('/');
-    } catch (e:any) {
-      setErr(e?.message || 'Error de autenticación');
+const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setErr(null);
+
+  try {
+    const { access_token, user } = await AuthAPI.login(correo, password);
+    login(access_token, user);
+    router.push('/');
+  } catch (e: unknown) {
+    if (isApiError(e)) {
+      setErr(e.message || 'Error de autenticación');
+    } else {
+      setErr('Error inesperado');
     }
-  };
+  }
+};
 
   return (
     <div className="mx-auto max-w-md px-4 py-10">
