@@ -6,6 +6,7 @@ import { Package, Truck, Ship, CheckCircle, ChevronRight, MapPin, Box, Calendar,
 import { TrazabilidadAPI } from '@/services/api';
 import { useMap } from '@/hooks/useMap';
 import { EventoTipoDtoUrlApi, EventoPayload } from '@/services/typesDto';
+import RoleGuard from '@/components/RoleGuard';
 
 type EstadoEvento = 'REGISTRADO' | 'EMBARCADO' | 'DESEMBARCADO' | 'NACIONALIZADO' | 'EN_DISTRIBUCION' | 'PRODUCTO_ADQUIRIDO';
 
@@ -872,6 +873,7 @@ const ProgressIndicator: React.FC = () => {
   };
 
   return (
+    <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR', 'TRANSPORTISTA', 'ADUANA', 'DISTRIBUIDOR']}>
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
@@ -959,5 +961,6 @@ const ProgressIndicator: React.FC = () => {
         </div>
       )}
     </div>
+    </RoleGuard>
   );
 }

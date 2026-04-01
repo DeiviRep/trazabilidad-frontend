@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Package, Eye, X, QrCode, MapPin, Calendar } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 import QRModal from '@/components/QRModal';
+import RoleGuard from '@/components/RoleGuard';
 
 type EstadoEvento = 'REGISTRADO' | 'EMBARCADO' | 'DESEMBARCADO' | 'NACIONALIZADO' | 'EN_DISTRIBUCION' | 'PRODUCTO_ADQUIRIDO';
 
@@ -369,6 +370,7 @@ export default function LotesPage() {
   });
 
   return (
+    <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR', 'TRANSPORTISTA', 'ADUANA', 'DISTRIBUIDOR']}>
     <div className="space-y-6">
       {/* Modal de productos */}
       <ProductosModal
@@ -474,5 +476,6 @@ export default function LotesPage() {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 }
