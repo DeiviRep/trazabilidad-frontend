@@ -14,6 +14,26 @@ export default function QRModal({ open, onClose, imageUrl }: Props) {
   if (!mounted) return null;
   if (!open) return null;
 
+  const handleDownload = () => {
+    if (!imageUrl) return;
+
+    const link = document.createElement('a');
+
+    // 👉 si es base64
+    if (imageUrl.startsWith('data:image')) {
+      link.href = imageUrl;
+      link.download = 'qr.png';
+    } else {
+      // 👉 si es URL
+      link.href = imageUrl;
+      link.download = 'qr.png';
+    }
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="fixed inset-0 z-1000 flex items-center justify-center bg-black/30 p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl">
@@ -24,17 +44,17 @@ export default function QRModal({ open, onClose, imageUrl }: Props) {
         {imageUrl ? (
           <div className="flex flex-col items-center">
             <img src={imageUrl} alt="QR" className="h-64 w-64 rounded-md border object-contain" />
-            <a
-              href={imageUrl}
+            <button
+              onClick={handleDownload}
               className="mt-3 text-sm text-blue-600 hover:underline"
-              target="_blank"
-              rel="noreferrer"
             >
-              Abrir/descargar
-            </a>
+              Descargar QR
+            </button>
           </div>
         ) : (
-          <p className="text-sm text-gray-500 h-64 w-64 rounded-md">Generando…</p>
+          <div className="flex items-center justify-center h-64 w-64">
+            <span className="text-gray-500 text-sm">Cargando QR...</span>
+          </div>
         )}
       </div>
     </div>

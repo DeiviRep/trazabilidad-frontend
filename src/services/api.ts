@@ -263,6 +263,10 @@ export const TrazabilidadAPI = {
     return URL.createObjectURL(data); // útil para <img src="..." />
   },
 
+  obtenerQRBase64: async (id: string) => {
+    const { data } = await api.get(`/trazabilidad/qr-base64/${id}`);
+    return data;
+  },
 };
 
 export default api;
