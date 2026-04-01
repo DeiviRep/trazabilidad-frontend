@@ -9,46 +9,46 @@ export type Rol =
 
 // Qué rutas puede ver cada rol
 export const ROLE_ROUTES: Record<Rol, string[]> = {
-  ADMIN:        ['/', '/lotes', '/registro', '/productos', '/scanner'],
-  PROVEEDOR:    ['/', '/lotes', '/registro', '/productos', '/scanner'],
-  TRANSPORTISTA:['/', '/lotes', '/scanner'],
-  ADUANA:       ['/', '/lotes', '/scanner'],
-  DISTRIBUIDOR: ['/', '/lotes', '/scanner'],
-  CONSUMIDOR:   ['/', '/scanner'],
+  ADMIN:        ['/dashboard', '/lotes', '/registro', '/productos', '/scanner'],
+  PROVEEDOR:    ['/dashboard', '/lotes', '/registro', '/productos', '/scanner'],
+  TRANSPORTISTA:['/dashboard', '/lotes', '/scanner'],
+  ADUANA:       ['/dashboard', '/lotes', '/scanner'],
+  DISTRIBUIDOR: ['/dashboard', '/lotes', '/scanner'],
+  CONSUMIDOR:   ['/dashboard', '/scanner'],
 };
 
 // Qué menú mostrar en Sidebar por rol
 export const SIDEBAR_ITEMS: Record<Rol, { label: string; href: string; icon: string }[]> = {
   ADMIN: [
-    { label: 'Dashboard',     href: '/',  icon: 'home' },
+    { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Nuevo Pedido',  href: '/registro',   icon: 'plus' },
     { label: 'Gestión Lotes', href: '/lotes',      icon: 'settings' },
     { label: 'Productos',     href: '/productos',  icon: 'package' },
     { label: 'Escanear QR',   href: '/scanner',    icon: 'qr' },
   ],
   PROVEEDOR: [
-    { label: 'Dashboard',     href: '/',  icon: 'home' },
+    { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Nuevo Pedido',  href: '/registro',   icon: 'plus' },
     { label: 'Mis Lotes',     href: '/lotes',      icon: 'package' },
     { label: 'Escanear QR',   href: '/scanner',    icon: 'qr' },
   ],
   TRANSPORTISTA: [
-    { label: 'Dashboard',     href: '/',  icon: 'home' },
+    { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Lotes Activos', href: '/lotes',      icon: 'truck' },
     { label: 'Escanear QR',   href: '/scanner',    icon: 'qr' },
   ],
   ADUANA: [
-    { label: 'Dashboard',     href: '/',  icon: 'home' },
+    { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Lotes Aduana',  href: '/lotes',      icon: 'shield' },
     { label: 'Escanear QR',   href: '/scanner',    icon: 'qr' },
   ],
   DISTRIBUIDOR: [
-    { label: 'Dashboard',     href: '/',  icon: 'home' },
+    { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Lotes',         href: '/lotes',      icon: 'package' },
     { label: 'Escanear QR',   href: '/scanner',    icon: 'qr' },
   ],
   CONSUMIDOR: [
-    { label: 'Dashboard',     href: '/',  icon: 'home' },
+    { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Verificar QR',  href: '/scanner',    icon: 'qr' },
   ],
 };
