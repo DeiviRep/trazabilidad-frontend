@@ -5,6 +5,7 @@ import { CheckCircle, MapPin, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMap } from '@/hooks/useMap';
 import { TrazabilidadAPI } from '@/services/api';
+import RoleGuard from '@/components/RoleGuard';
 
 interface Producto {
   id: number;
@@ -114,6 +115,7 @@ export default function RegistroPage() {
   }, [productos.length, formData.cantidadProductos]);
 
   return (
+    <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR']}>
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Registro de Nuevo Producto</h2>
@@ -352,5 +354,6 @@ export default function RegistroPage() {
         </form>
       </div>
     </div>
+    </RoleGuard>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Package, Eye, QrCode } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 import QRModal from '@/components/QRModal';
+import RoleGuard from '@/components/RoleGuard';
 
 export interface DataProductType {
   lote: string
@@ -98,6 +99,7 @@ export default function ProductosPage() {
   }, []);
 
   return (
+      <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR']}>
     <div className="space-y-6">
       <QRModal onClose={ () => setQrModalOpen(false)} open={qrModalOpen} imageUrl={`${API_BASE_URL}/trazabilidad/qr-image/${selectedProducto}`} />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
@@ -186,6 +188,7 @@ export default function ProductosPage() {
         </div>
       </div>
     </div>
+    </RoleGuard>
   );
 }
 

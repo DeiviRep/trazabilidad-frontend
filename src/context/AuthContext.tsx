@@ -53,3 +53,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+export function useRole() {
+  const { user } = useAuth();
+  return user?.rol ?? null;
+}
+
+export function useHasRole(...roles: string[]): boolean {
+  const rol = useRole();
+  return rol !== null && roles.includes(rol);
+}
