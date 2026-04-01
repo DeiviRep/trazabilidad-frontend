@@ -52,6 +52,7 @@ export default function ProductosPage() {
   const [dataProductos, setDataProductos] = useState<ProductosType[]>([]);
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedProducto, setSelectedProducto] = useState<string>('');
+  const [qrImage, setQrImage] = useState<string>('');
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -72,12 +73,25 @@ export default function ProductosPage() {
     const coincideEstado = estadoFiltro === 'TODOS' || producto.estado === estadoFiltro;
     return coincideTexto && coincideEstado;
   });
-  const handleOpenQrModal = async (id: string) => {
-    await TrazabilidadAPI.generarQR(id);
-    setSelectedProducto(id);
-    setQrModalOpen(true);
-  };
+const handleOpenQrModal = async (id: string) => {
+  try {
+    // 🔥 INTENTA BASE64 PRIMERO (DEFAULT)
+    const response = await TrazabilidadAPI.obtenerQRBase64(id);
 
+    if (response?.base64) {
+      setQrImage(response.base64);
+    } else {
+      throw new Error('No base64');
+    }
+
+  } catch (error) {
+    // 🔁 FALLBACK A URL
+    setQrImage(`${API_BASE_URL}/trazabilidad/qr-image/${id}`);
+  }
+
+  setSelectedProducto(id);
+  setQrModalOpen(true);
+};
   const cargarDatos = async () => {
     const data = await TrazabilidadAPI.listarProductos();
     setDataProductos(data.map((item: DataProductType) => {
@@ -101,7 +115,7 @@ export default function ProductosPage() {
   return (
       <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR']}>
     <div className="space-y-6">
-      <QRModal onClose={ () => setQrModalOpen(false)} open={qrModalOpen} imageUrl={`${API_BASE_URL}/trazabilidad/qr-image/${selectedProducto}`} />
+      <QRModal onClose={ () => setQrModalOpen(false)} open={qrModalOpen} imageUrl={qrImage}/>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <h2 className="text-2xl font-bold text-gray-900">Lista de Productos</h2>
         <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">

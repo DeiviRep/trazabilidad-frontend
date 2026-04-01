@@ -64,7 +64,7 @@ function MapaEnvios({ dispositivos }: { dispositivos: DispositivoMapa[] }) {
           if (isNaN(lat) || isNaN(lon)) return null;
           
           return (
-            <Marker key={d.id} position={[lat, lon]}>
+            <Marker key={`${d.id}-${lat}-${lon}`} position={[lat, lon]}>
               <Popup>
                 <div className="text-xs">
                   <div className="font-semibold">{d.marca} {d.modelo}</div>
