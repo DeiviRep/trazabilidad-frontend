@@ -37,19 +37,29 @@ export default function RegistroPage() {
   const [step, setStep] = useState<number>(1);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
-    const value = e.target.name === 'cantidadProductos' ? parseInt(e.target.value) : e.target.value;
+    let value: string | number = e.target.value;
+    if (e.target.name === 'cantidadProductos') {
+      value = parseInt(value as string);
+      if (value > 50) value = 50;
+
+      if (isNaN(value) || value < 1) value = 1; // evitar errores
+    }
+
     setFormData({
       ...formData,
       [e.target.name]: value
     });
-    
+
     if (e.target.name === 'cantidadProductos') {
-      const newProductos: Producto[] = Array.from({length: value as number}, (_, i) => ({
+      const cantidad = value as number;
+
+      const newProductos: Producto[] = Array.from({ length: cantidad }, (_, i) => ({
         id: i + 1,
         modelo: '',
         marca: '',
         imeiSerial: '',
       }));
+
       setProductos(newProductos);
     }
   };
@@ -147,18 +157,16 @@ export default function RegistroPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Cantidad de Productos *</label>
-                  <select
+                  <input
+                    type="number"
                     name="cantidadProductos"
                     value={formData.cantidadProductos}
                     onChange={handleInputChange}
+                    min={1}
+                    max={100} // opcional
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value={1}>1 producto</option>
-                    <option value={2}>2 productos</option>
-                    <option value={3}>3 productos</option>
-                    <option value={6}>6 productos</option>
-                    <option value={12}>12 productos</option>
-                  </select>
+                    placeholder="Ingrese cantidad"
+                  />
                 </div>
                 
                 <div>
