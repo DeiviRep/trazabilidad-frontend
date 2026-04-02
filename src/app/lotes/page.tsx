@@ -102,20 +102,39 @@ const ProductosModal: React.FC<ProductosModalProps> = ({ isOpen, onClose, lote, 
   }, {} as Record<EstadoEvento, number>);
 
   const handleOpenQrModal = async (id: string) => {
-    if (qrCache[id]) {
-      setQrImage(qrCache[id]);
+    try {
+      if (qrCache[id]) {
+        setQrImage(qrCache[id]);
+        setSelectedProducto(id);
+        setQrModalOpen(true);
+        return;
+      }
+    
+      const response = await TrazabilidadAPI.obtenerQRBase64(id);
+    
+      let base64 = response?.base64;
+    
+      if (!base64) throw new Error("QR vacío");
+    
+      // 🔥 asegurar prefijo
+      if (!base64.startsWith('data:image')) {
+        base64 = `data:image/png;base64,${base64}`;
+      }
+    
+      setQrCache(prev => ({ ...prev, [id]: base64 }));
+    
+      setQrImage(base64);
       setSelectedProducto(id);
       setQrModalOpen(true);
-      return;
+    
+    } catch (error) {
+      console.error("Error QR:", error);
+    
+      // fallback seguro
+      setQrImage(`${process.env.NEXT_PUBLIC_API_BASE_URL}/trazabilidad/qr-image/${id}`);
+      setSelectedProducto(id);
+      setQrModalOpen(true);
     }
-
-    const response = await TrazabilidadAPI.generarQR(id);
-    const base64 = response.qrBase64;
-
-    setQrCache(prev => ({ ...prev, [id]: base64 }));
-    setQrImage(base64);
-    setSelectedProducto(id);
-    setQrModalOpen(true);
   };
 
   // Reset filtros cuando se abre el modal
