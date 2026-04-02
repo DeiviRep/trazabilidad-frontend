@@ -84,7 +84,8 @@ const ProductosModal: React.FC<ProductosModalProps> = ({ isOpen, onClose, lote, 
   const [estadoFiltroModal, setEstadoFiltroModal] = useState<string>('TODOS');
   const [selectedProducto, setSelectedProducto] = useState<string>('');
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const [qrImage, setQrImage] = useState<string>('');
+  const [qrCache, setQrCache] = useState<Record<string, string>>({});
 
   const productosFiltrados = productos.filter(producto => {
     const coincideTexto = producto.marca.toLowerCase().includes(filtroModal.toLowerCase()) || 
@@ -100,11 +101,22 @@ const ProductosModal: React.FC<ProductosModalProps> = ({ isOpen, onClose, lote, 
     return acc;
   }, {} as Record<EstadoEvento, number>);
 
-    const handleOpenQrModal = async (id: string) => {
-      await TrazabilidadAPI.generarQR(id);
+  const handleOpenQrModal = async (id: string) => {
+    if (qrCache[id]) {
+      setQrImage(qrCache[id]);
       setSelectedProducto(id);
       setQrModalOpen(true);
-    };
+      return;
+    }
+
+    const response = await TrazabilidadAPI.generarQR(id);
+    const base64 = response.qrBase64;
+
+    setQrCache(prev => ({ ...prev, [id]: base64 }));
+    setQrImage(base64);
+    setSelectedProducto(id);
+    setQrModalOpen(true);
+  };
 
   // Reset filtros cuando se abre el modal
   useEffect(() => {
@@ -119,11 +131,11 @@ const ProductosModal: React.FC<ProductosModalProps> = ({ isOpen, onClose, lote, 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        {/* Overlay */}
-        {/* <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} /> */}
-        
-        {/* Modal */}
-        <QRModal onClose={ () => setQrModalOpen(false)} open={qrModalOpen} imageUrl={`${API_BASE_URL}/trazabilidad/qr-image/${selectedProducto}`} />
+        <QRModal 
+          onClose={() => setQrModalOpen(false)} 
+          open={qrModalOpen} 
+          imageUrl={qrImage} 
+        />
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
           {/* Header */}
           <div className="bg-white px-6 py-4 border-b border-gray-200">
@@ -149,24 +161,6 @@ const ProductosModal: React.FC<ProductosModalProps> = ({ isOpen, onClose, lote, 
               </button>
             </div>
           </div>
-
-          {/* Estadísticas */}
-          {/* <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Estado de los Productos</h4>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-              {Object.entries(estadoColors).map(([estado, colorClass]) => {
-                const cantidad = estadisticasProductos[estado as EstadoEvento] || 0;
-                return (
-                  <div key={estado} className={`${colorClass} px-3 py-2 rounded-lg text-center`}>
-                    <div className="text-lg font-bold">{cantidad}</div>
-                    <div className="text-xs font-medium">
-                      {estado.replace('_', ' ')}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div> */}
 
           {/* Filtros */}
           <div className="px-6 py-4 bg-white border-b border-gray-200">
