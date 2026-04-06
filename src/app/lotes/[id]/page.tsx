@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Package, Truck, Ship, CheckCircle, ChevronRight, MapPin, Box, Calendar, ShoppingCart } from 'lucide-react';
+import {
+  Package, Truck, Ship, CheckCircle, MapPin, Box, Calendar, ShoppingCart, ArrowLeft
+} from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 import { useMap } from '@/hooks/useMap';
 import { EventoTipoDtoUrlApi, EventoPayload } from '@/services/typesDto';
@@ -11,160 +13,48 @@ import RoleGuard from '@/components/RoleGuard';
 type EstadoEvento = 'REGISTRADO' | 'EMBARCADO' | 'DESEMBARCADO' | 'NACIONALIZADO' | 'EN_DISTRIBUCION' | 'PRODUCTO_ADQUIRIDO';
 
 interface ProductoBackend {
-  lote: string;
-  uuidLote: string;
-  id: string;
-  marca: string;
-  modelo: string;
-  imeiSerial: string;
-  estado: EstadoEvento;
-  urlLote: string;
-  fechaCreacion: string;
-  eventos: {
-    tipo: EstadoEvento;
-    fecha: string;
-    puntoControl: string;
-    coordenadas: [number, number];
-  }[];
+  lote: string; uuidLote: string; id: string; marca: string; modelo: string;
+  imeiSerial: string; estado: EstadoEvento; urlLote: string; fechaCreacion: string;
+  eventos: { tipo: EstadoEvento; fecha: string; puntoControl: string; coordenadas: [number, number] }[];
 }
 
 interface Lote {
-  id: string;
-  lote: string;
-  marca: string;
-  modelo: string;
-  cantidadProductos: number;
-  estado: EstadoEvento;
-  url: string;
-  fechaCreacion: string;
-  eventos: any[];
-  productos: ProductoBackend[];
+  id: string; lote: string; marca: string; modelo: string;
+  cantidadProductos: number; estado: EstadoEvento; url: string;
+  fechaCreacion: string; eventos: any[]; productos: ProductoBackend[];
 }
 
 interface EtapaConfig {
-  titulo: string;
-  estado: EstadoEvento;
-  bgColor: string;
-  bgColorLight: string;
-  borderColor: string;
-  textColor: string;
-  textColorDark: string;
-  hoverBorderColor: string;
+  titulo: string; estado: EstadoEvento; bgColor: string; bgColorLight: string;
+  borderColor: string; textColor: string; textColorDark: string; hoverBorderColor: string;
   icon: React.ComponentType<{ className?: string; size?: number }>;
-  descripcion: string;
-  eventoUrlApi: EventoTipoDtoUrlApi;
-  esDinamico?: boolean;
+  descripcion: string; eventoUrlApi: EventoTipoDtoUrlApi; esDinamico?: boolean;
 }
 
 interface EventFormData {
-  punto: string;
-  latitud: string;
-  longitud: string;
-  contenedor: string;
-  tipoTransporte: string;
-  dim: string;
-  valorCIF: string;
-  totalPagado: string;
-  comerciante: string;
-  productosSeleccionados: string[];
+  punto: string; latitud: string; longitud: string; contenedor: string;
+  tipoTransporte: string; dim: string; valorCIF: string; totalPagado: string;
+  comerciante: string; productosSeleccionados: string[];
 }
 
-interface Params {
-  id: string
-}
+interface Params { id: string }
 
-// ✅ COLORES FIJOS - No dinámicos
 const ETAPAS_FLUJO: Record<string, EtapaConfig> = {
-  REGISTRO: {
-    titulo: "Registro",
-    estado: 'REGISTRADO',
-    bgColor: 'bg-indigo-600',
-    bgColorLight: 'bg-indigo-50',
-    borderColor: 'border-indigo-200',
-    textColor: 'text-indigo-600',
-    textColorDark: 'text-indigo-700',
-    hoverBorderColor: 'hover:border-indigo-300',
-    icon: Box,
-    descripcion: "Productos registrados en el sistema",
-    eventoUrlApi: 'REGISTRO'
-  },
-  EMBARQUE: {
-    titulo: "Embarque",
-    estado: 'EMBARCADO',
-    bgColor: 'bg-orange-600',
-    bgColorLight: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    textColor: 'text-orange-600',
-    textColorDark: 'text-orange-700',
-    hoverBorderColor: 'hover:border-orange-300',
-    icon: Truck,
-    descripcion: "Registra información del transporte y contenedor para todo el lote",
-    eventoUrlApi: 'EMBARQUE'
-  },
-  DESEMBARQUE: {
-    titulo: "Desembarque",
-    estado: 'DESEMBARCADO',
-    bgColor: 'bg-cyan-600',
-    bgColorLight: 'bg-cyan-50',
-    borderColor: 'border-cyan-200',
-    textColor: 'text-cyan-600',
-    textColorDark: 'text-cyan-700',
-    hoverBorderColor: 'hover:border-cyan-300',
-    icon: Ship,
-    descripcion: "Verifica llegada al puerto extranjero e integridad del lote completo",
-    eventoUrlApi: 'DESEMBARQUE'
-  },
-  NACIONALIZACION: {
-    titulo: "Nacionalización",
-    estado: 'NACIONALIZADO',
-    bgColor: 'bg-green-600',
-    bgColorLight: 'bg-green-50',
-    borderColor: 'border-green-200',
-    textColor: 'text-green-600',
-    textColorDark: 'text-green-700',
-    hoverBorderColor: 'hover:border-green-300',
-    icon: CheckCircle,
-    descripcion: "Procesa documentos aduaneros y pago de impuestos para el lote",
-    eventoUrlApi: 'NACIONALIZACION'
-  },
-  DISTRIBUCION: {
-    titulo: "Distribución",
-    estado: 'EN_DISTRIBUCION',
-    bgColor: 'bg-purple-600',
-    bgColorLight: 'bg-purple-50',
-    borderColor: 'border-purple-200',
-    textColor: 'text-purple-600',
-    textColorDark: 'text-purple-700',
-    hoverBorderColor: 'hover:border-purple-300',
-    icon: Package,
-    descripcion: "Distribuye productos seleccionados a comerciantes específicos",
-    eventoUrlApi: 'DISTRIBUCION',
-    esDinamico: true
-  },
-  PRODUCTO_ADQUIRIDO: {
-    titulo: "Producto Adquirido",
-    estado: 'PRODUCTO_ADQUIRIDO',
-    bgColor: 'bg-blue-600',
-    bgColorLight: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    textColor: 'text-blue-600',
-    textColorDark: 'text-blue-700',
-    hoverBorderColor: 'hover:border-blue-300',
-    icon: ShoppingCart,
-    descripcion: "Marca productos específicos como vendidos/adquiridos",
-    eventoUrlApi: 'ADQUIRIDO',
-    esDinamico: true
-  }
+  REGISTRO:           { titulo: 'Registro',       estado: 'REGISTRADO',         bgColor: 'bg-indigo-600', bgColorLight: 'bg-indigo-50', borderColor: 'border-indigo-200', textColor: 'text-indigo-600', textColorDark: 'text-indigo-700', hoverBorderColor: 'hover:border-indigo-300', icon: Box,          descripcion: 'Productos registrados en el sistema',                                  eventoUrlApi: 'REGISTRO' },
+  EMBARQUE:           { titulo: 'Embarque',        estado: 'EMBARCADO',          bgColor: 'bg-orange-600', bgColorLight: 'bg-orange-50', borderColor: 'border-orange-200', textColor: 'text-orange-600', textColorDark: 'text-orange-700', hoverBorderColor: 'hover:border-orange-300', icon: Truck,        descripcion: 'Registra información del transporte y contenedor',                      eventoUrlApi: 'EMBARQUE' },
+  DESEMBARQUE:        { titulo: 'Desembarque',     estado: 'DESEMBARCADO',       bgColor: 'bg-cyan-600',   bgColorLight: 'bg-cyan-50',   borderColor: 'border-cyan-200',   textColor: 'text-cyan-600',   textColorDark: 'text-cyan-700',   hoverBorderColor: 'hover:border-cyan-300',   icon: Ship,         descripcion: 'Verifica llegada al puerto e integridad del lote',                     eventoUrlApi: 'DESEMBARQUE' },
+  NACIONALIZACION:    { titulo: 'Nacionalización', estado: 'NACIONALIZADO',      bgColor: 'bg-green-600',  bgColorLight: 'bg-green-50',  borderColor: 'border-green-200',  textColor: 'text-green-600',  textColorDark: 'text-green-700',  hoverBorderColor: 'hover:border-green-300',  icon: CheckCircle,  descripcion: 'Procesa documentos aduaneros y pago de impuestos',                     eventoUrlApi: 'NACIONALIZACION' },
+  DISTRIBUCION:       { titulo: 'Distribución',    estado: 'EN_DISTRIBUCION',    bgColor: 'bg-purple-600', bgColorLight: 'bg-purple-50', borderColor: 'border-purple-200', textColor: 'text-purple-600', textColorDark: 'text-purple-700', hoverBorderColor: 'hover:border-purple-300', icon: Package,      descripcion: 'Distribuye productos a comerciantes específicos',                      eventoUrlApi: 'DISTRIBUCION',   esDinamico: true },
+  PRODUCTO_ADQUIRIDO: { titulo: 'Adquirido',       estado: 'PRODUCTO_ADQUIRIDO', bgColor: 'bg-blue-600',   bgColorLight: 'bg-blue-50',   borderColor: 'border-blue-200',   textColor: 'text-blue-600',   textColorDark: 'text-blue-700',   hoverBorderColor: 'hover:border-blue-300',   icon: ShoppingCart, descripcion: 'Marca productos específicos como vendidos/adquiridos',                 eventoUrlApi: 'ADQUIRIDO',      esDinamico: true },
 };
 
-// ✅ MAPEO DE COLORES PARA ESTADÍSTICAS
 const COLOR_MAP: Record<EstadoEvento, { bg: string; text: string; textBold: string }> = {
-  REGISTRADO: { bg: 'bg-indigo-50', text: 'text-indigo-600', textBold: 'text-indigo-800' },
-  EMBARCADO: { bg: 'bg-orange-50', text: 'text-orange-600', textBold: 'text-orange-800' },
-  DESEMBARCADO: { bg: 'bg-cyan-50', text: 'text-cyan-600', textBold: 'text-cyan-800' },
-  NACIONALIZADO: { bg: 'bg-green-50', text: 'text-green-600', textBold: 'text-green-800' },
-  EN_DISTRIBUCION: { bg: 'bg-purple-50', text: 'text-purple-600', textBold: 'text-purple-800' },
-  PRODUCTO_ADQUIRIDO: { bg: 'bg-blue-50', text: 'text-blue-600', textBold: 'text-blue-800' }
+  REGISTRADO:         { bg: 'bg-indigo-50',  text: 'text-indigo-600',  textBold: 'text-indigo-800' },
+  EMBARCADO:          { bg: 'bg-orange-50',  text: 'text-orange-600',  textBold: 'text-orange-800' },
+  DESEMBARCADO:       { bg: 'bg-cyan-50',    text: 'text-cyan-600',    textBold: 'text-cyan-800' },
+  NACIONALIZADO:      { bg: 'bg-green-50',   text: 'text-green-600',   textBold: 'text-green-800' },
+  EN_DISTRIBUCION:    { bg: 'bg-purple-50',  text: 'text-purple-600',  textBold: 'text-purple-800' },
+  PRODUCTO_ADQUIRIDO: { bg: 'bg-blue-50',    text: 'text-blue-600',    textBold: 'text-blue-800' },
 };
 
 export default function LoteIndividualPage({ params }: { params: Promise<Params> }) {
@@ -177,407 +67,123 @@ export default function LoteIndividualPage({ params }: { params: Promise<Params>
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const transformarDatosBackend = (productos: ProductoBackend[]): Lote | null => {
-    if (!productos || productos.length === 0) return null;
+  const getEstadoAnterior = (estado: EstadoEvento): EstadoEvento | null => ({
+    'EMBARCADO': 'REGISTRADO', 'DESEMBARCADO': 'EMBARCADO',
+    'NACIONALIZADO': 'DESEMBARCADO', 'EN_DISTRIBUCION': 'NACIONALIZADO',
+    'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION'
+  } as any)[estado] ?? null;
 
-    const primerProducto = productos[0];
-    const marcasUnicas = [...new Set(productos.map(p => p.marca))];
-    const modelosUnicos = [...new Set(productos.map(p => p.modelo))];
-    
-    const ordenEstados: EstadoEvento[] = ['REGISTRADO', 'EMBARCADO', 'DESEMBARCADO', 'NACIONALIZADO', 'EN_DISTRIBUCION', 'PRODUCTO_ADQUIRIDO'];
-    const estadoMasAvanzado = productos.reduce((estadoMax, producto) => {
-      const indiceActual = ordenEstados.indexOf(producto.estado);
-      const indiceMax = ordenEstados.indexOf(estadoMax);
-      return indiceActual > indiceMax ? producto.estado : estadoMax;
-    }, 'REGISTRADO' as EstadoEvento);
+  const getProductosParaEtapa = (etapa: keyof typeof ETAPAS_FLUJO, lote: Lote): ProductoBackend[] => {
+    const anterior = getEstadoAnterior(ETAPAS_FLUJO[etapa].estado);
+    return anterior ? lote.productos.filter(p => p.estado === anterior) : lote.productos.filter(p => p.estado === 'REGISTRADO');
+  };
 
-    return {
-      id: primerProducto.uuidLote,
-      lote: primerProducto.lote,
-      marca: marcasUnicas.length === 1 ? marcasUnicas[0] : `${marcasUnicas[0]} y otros`,
-      modelo: modelosUnicos.length === 1 ? modelosUnicos[0] : `${modelosUnicos[0]} y otros`,
-      cantidadProductos: productos.length,
-      estado: estadoMasAvanzado,
-      url: primerProducto.urlLote,
-      fechaCreacion: primerProducto.fechaCreacion,
-      eventos: [],
-      productos: productos
-    };
+  const getNextEtapa = (lote: Lote): keyof typeof ETAPAS_FLUJO => {
+    const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
+    return etapas.find(e => getProductosParaEtapa(e, lote).length > 0) ?? etapas[etapas.length - 1];
+  };
+
+  const transformar = (productos: ProductoBackend[]): Lote | null => {
+    if (!productos?.length) return null;
+    const p0 = productos[0];
+    const orden: EstadoEvento[] = ['REGISTRADO','EMBARCADO','DESEMBARCADO','NACIONALIZADO','EN_DISTRIBUCION','PRODUCTO_ADQUIRIDO'];
+    const estado = productos.reduce((max, p) => orden.indexOf(p.estado) > orden.indexOf(max) ? p.estado : max, 'REGISTRADO' as EstadoEvento);
+    const marcas = [...new Set(productos.map(p => p.marca))];
+    const modelos = [...new Set(productos.map(p => p.modelo))];
+    return { id: p0.uuidLote, lote: p0.lote, marca: marcas.length === 1 ? marcas[0] : `${marcas[0]} y otros`, modelo: modelos.length === 1 ? modelos[0] : `${modelos[0]} y otros`, cantidadProductos: productos.length, estado, url: p0.urlLote, fechaCreacion: p0.fechaCreacion, eventos: [], productos };
   };
 
   const run = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(true); setError(null);
       const data = await TrazabilidadAPI.listarPorLote(idLote);
-      
-      const loteTransformado = transformarDatosBackend(data);
-      if (loteTransformado) {
-        setLoteSeleccionado(loteTransformado);
-        const nextEtapa = getNextEtapa(loteTransformado);
-        setEtapaActual(nextEtapa);
-      } else {
-        setError('No se encontraron productos para este lote');
-      }
-    } catch (err) {
-      console.error('Error al cargar el lote:', err);
-      setError('Error al cargar la información del lote');
-    } finally {
-      setLoading(false);
-    }
+      const lote = transformar(data);
+      if (lote) { setLoteSeleccionado(lote); setEtapaActual(getNextEtapa(lote)); }
+      else setError('No se encontraron productos para este lote');
+    } catch { setError('Error al cargar la información del lote'); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    if (!idLote) return;
-    run();
-  }, [idLote]);
+  useEffect(() => { if (idLote) run(); }, [idLote]);
 
-  const getNextEtapa = (lote: Lote): keyof typeof ETAPAS_FLUJO => {
-    const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
-    
-    for (const etapa of etapas) {
-      const productosDisponibles = getProductosDisponiblesParaEtapa(etapa, lote);
-      if (productosDisponibles.length > 0) {
-        return etapa;
-      }
-    }
-    
-    return etapas[etapas.length - 1];
-  };
-
-  const getProductosDisponiblesParaEtapa = (
-    etapa: keyof typeof ETAPAS_FLUJO,
-    lote: Lote
-  ): ProductoBackend[] => {
-    const config = ETAPAS_FLUJO[etapa];
-    const estadoAnterior = getEstadoAnterior(config.estado);
-    if (!estadoAnterior) {
-      // Primera etapa: solo mostrar si aún no se ha registrado nada
-      return lote.productos.filter(p => p.estado === 'REGISTRADO');
-    }
-    return lote.productos.filter(p => p.estado === estadoAnterior);
-  };
-
-  const getEstadoAnterior = (estado: EstadoEvento): EstadoEvento | null => {
-    const flujoEstados: Partial<Record<EstadoEvento, EstadoEvento>> = {
-      'EMBARCADO': 'REGISTRADO',
-      'DESEMBARCADO': 'EMBARCADO',
-      'NACIONALIZADO': 'DESEMBARCADO',
-      'EN_DISTRIBUCION': 'NACIONALIZADO',
-      'PRODUCTO_ADQUIRIDO': 'EN_DISTRIBUCION'
-    };
-    return flujoEstados[estado] || null;
-  };
-
-  const getProductosDisponiblesPorEtapa = (etapa: keyof typeof ETAPAS_FLUJO): ProductoBackend[] => {
-    if (!loteSeleccionado) return [];
-    return getProductosDisponiblesParaEtapa(etapa, loteSeleccionado);
-  };
-
-  const handleSubmit = async (formData: Partial<EventFormData>): Promise<void> => {
-    if (!loteSeleccionado || !loteSeleccionado.productos) return;
-
+  const handleSubmit = async (fd: Partial<EventFormData>) => {
+    if (!loteSeleccionado) return;
     try {
       setSubmitting(true);
-      const etapaConfig = ETAPAS_FLUJO[etapaActual];
-      
-      const basePayload: Omit<EventoPayload, 'id'> = {
-        latitud: formData.latitud || '',
-        longitud: formData.longitud || '',
-        puntoControl: formData.punto || '',
-      };
-
-      switch (etapaActual) {
-        case 'EMBARQUE':
-          basePayload.nroContenedor = formData.contenedor;
-          basePayload.tipoTransporte = formData.tipoTransporte;
-          break;
-        case 'DESEMBARQUE':
-          basePayload.integridad = true;
-          basePayload.descripcionIntegridad = 'Lote recibido en buen estado';
-          break;
-        case 'NACIONALIZACION':
-          basePayload.dim = formData.dim;
-          if (formData.valorCIF) basePayload.valorCIF = parseFloat(formData.valorCIF);
-          if (formData.totalPagado) basePayload.totalPagado = parseFloat(formData.totalPagado);
-          break;
-        case 'DISTRIBUCION':
-          basePayload.comerciante = formData.comerciante || 'Distribuidor General';
-          break;
-        case 'PRODUCTO_ADQUIRIDO':
-          basePayload.fechaCompra = new Date().toISOString();
-          break;
-      }
-
-      let productosAProcesar: ProductoBackend[];
-      
-      if (etapaConfig.esDinamico && formData.productosSeleccionados) {
-        productosAProcesar = loteSeleccionado.productos.filter(p => 
-          formData.productosSeleccionados!.includes(p.id)
-        );
-      } else {
-        productosAProcesar = loteSeleccionado.productos;
-      }
-
-      const eventosPayload: EventoPayload[] = productosAProcesar.map(producto => ({
-        ...basePayload,
-        id: producto.id
-      }));
-      
-      await TrazabilidadAPI.eventoLote({
-        eventoUrlApi: etapaConfig.eventoUrlApi,
-        body: eventosPayload 
-      });
-
+      const cfg = ETAPAS_FLUJO[etapaActual];
+      const base: Omit<EventoPayload, 'id'> = { latitud: fd.latitud||'', longitud: fd.longitud||'', puntoControl: fd.punto||'' };
+      if (etapaActual==='EMBARQUE')        { base.nroContenedor=fd.contenedor; base.tipoTransporte=fd.tipoTransporte; }
+      if (etapaActual==='DESEMBARQUE')     { base.integridad=true; base.descripcionIntegridad='Lote recibido en buen estado'; }
+      if (etapaActual==='NACIONALIZACION') { base.dim=fd.dim; if(fd.valorCIF) base.valorCIF=parseFloat(fd.valorCIF); if(fd.totalPagado) base.totalPagado=parseFloat(fd.totalPagado); }
+      if (etapaActual==='DISTRIBUCION')    { base.comerciante=fd.comerciante||'Distribuidor General'; }
+      if (etapaActual==='PRODUCTO_ADQUIRIDO') { base.fechaCompra=new Date().toISOString(); }
+      const prods = cfg.esDinamico && fd.productosSeleccionados?.length
+        ? loteSeleccionado.productos.filter(p => fd.productosSeleccionados!.includes(p.id))
+        : loteSeleccionado.productos;
+      await TrazabilidadAPI.eventoLote({ eventoUrlApi: cfg.eventoUrlApi, body: prods.map(p => ({ ...base, id: p.id })) });
       await run();
-
-    } catch (error) {
-      console.error('Error al registrar evento:', error);
-      setError('Error al registrar el evento. Por favor, intenta nuevamente.');
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { setError('Error al registrar el evento.'); }
+    finally { setSubmitting(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Box className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
-          <p className="text-gray-500">Cargando información del lote...</p>
+  if (loading) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center"><Box className="w-10 h-10 text-gray-300 mx-auto mb-3 animate-pulse" /><p className="text-gray-400 text-sm">Cargando lote...</p></div>
+    </div>
+  );
+
+  if (error && !loteSeleccionado) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center space-y-3">
+        <Box className="w-10 h-10 text-red-300 mx-auto" />
+        <p className="text-red-500 text-sm">{error}</p>
+        <div className="flex gap-2 justify-center">
+          <button onClick={() => { setError(null); run(); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Reintentar</button>
+          <button onClick={() => router.push('/lotes')} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Volver</button>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Box className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <p className="text-red-500 mb-4">{error}</p>
-          <button
-            onClick={() => {
-              setError(null);
-              run();
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mr-4"
-          >
-            Reintentar
-          </button>
-          <button
-            onClick={() => router.push('/lotes')}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Volver a Lotes
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!loteSeleccionado) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Box className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No se encontró información del lote</p>
-          <button
-            onClick={() => router.push('/lotes')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Volver a Lotes
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const etapaConfig = ETAPAS_FLUJO[etapaActual];
-  const productosDisponibles = getProductosDisponiblesPorEtapa(etapaActual);
-
-  // ✅ NUEVA LÓGICA DE ESTADO VISUAL DE CADA ETAPA
-const getEstadoEtapaVisual = (
-  etapa: keyof typeof ETAPAS_FLUJO,
-  lote: Lote
-): 'COMPLETADA' | 'ACTIVA' | 'FUTURA' => {
-  const config = ETAPAS_FLUJO[etapa];
-  const estadoActual = config.estado;
-  const estadoAnterior = getEstadoAnterior(estadoActual);
-
-  const productos = lote.productos;
-  const total = productos.length;
-
-  // Orden de flujo para comparar progresión
-  const orden = [
-    'REGISTRADO',
-    'EMBARCADO',
-    'DESEMBARCADO',
-    'NACIONALIZADO',
-    'EN_DISTRIBUCION',
-    'PRODUCTO_ADQUIRIDO'
-  ];
-
-  // Productos que ya alcanzaron o superaron esta etapa
-  const completados = productos.filter(p =>
-    orden.indexOf(p.estado) >= orden.indexOf(estadoActual)
-  ).length;
-
-  // Si todos los productos ya superaron o alcanzaron esta etapa
-  if (completados === total) return 'COMPLETADA';
-
-  // Productos listos para esta etapa (en estado anterior)
-  const disponibles = estadoAnterior
-    ? productos.filter(p => p.estado === estadoAnterior).length
-    : 0;
-
-  // Si hay productos listos para procesar
-  if (disponibles > 0) return 'ACTIVA';
-
-  // Si aún no hay productos en el estado anterior → futura
-  return 'FUTURA';
-};
-  // ✅ COMPONENTE PROGRESO CON CLICK
-const ProgressIndicator: React.FC = () => {
-  const etapas = Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>;
-
-  return (
-    <div className="mb-8 overflow-x-auto">
-      <div className="flex items-center space-x-2 min-w-max pb-4">
-        {etapas.map((etapa, index) => {
-          const config = ETAPAS_FLUJO[etapa];
-          const Icon = config.icon;
-          const estadoVisual = getEstadoEtapaVisual(etapa, loteSeleccionado);
-
-          const isActiva = estadoVisual === 'ACTIVA';
-          const isCompletada = estadoVisual === 'COMPLETADA';
-          const isFutura = estadoVisual === 'FUTURA';
-
-          return (
-            <div key={etapa} className="flex items-center">
-              <button
-                onClick={() => { if (isActiva) setEtapaActual(etapa); }}
-                disabled={!isActiva}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
-                  isActiva
-                    ? `${config.bgColorLight} ${config.borderColor} shadow-md cursor-pointer`
-                    : isCompletada
-                      ? 'bg-green-50 border-green-200 shadow-sm cursor-default'
-                      : 'bg-gray-50 border-gray-200 opacity-70 cursor-not-allowed'
-                }`}
-              >
-                <div className={`p-2 rounded-lg transition-all ${
-                  isCompletada
-                    ? 'bg-green-500 text-white'
-                    : isActiva
-                      ? `${config.bgColor} text-white`
-                      : 'bg-gray-300 text-gray-600'
-                }`}>
-                  {isCompletada ? <CheckCircle size={18} /> : <Icon size={18} />}
-                </div>
-
-                <div>
-                  <span className={`font-semibold text-sm block ${
-                    isCompletada
-                      ? 'text-green-700'
-                      : isActiva
-                        ? config.textColorDark
-                        : 'text-gray-500'
-                  }`}>
-                    {config.titulo}
-                  </span>
-                  <span className={`text-xs ${
-                    isCompletada
-                      ? 'text-green-600 font-medium'
-                      : isActiva
-                        ? 'text-yellow-700'
-                        : 'text-gray-400'
-                  }`}>
-                    {isCompletada
-                      ? '✓ Completado'
-                      : isActiva
-                        ? 'En proceso'
-                        : 'Pendiente'}
-                  </span>
-                </div>
-              </button>
-
-              {index < etapas.length - 1 && (
-                <div className="flex items-center mx-3">
-                  <ChevronRight
-                    className={isCompletada ? 'text-green-400' : 'text-gray-300'}
-                    size={20}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
       </div>
     </div>
   );
-};
-  const ProductSelector: React.FC<{ 
-    productos: ProductoBackend[], 
-    productosSeleccionados: string[], 
-    onSelectionChange: (seleccionados: string[]) => void 
-  }> = ({ productos, productosSeleccionados, onSelectionChange }) => {
-    const toggleProducto = (productoId: string) => {
-      if (productosSeleccionados.includes(productoId)) {
-        onSelectionChange(productosSeleccionados.filter(id => id !== productoId));
-      } else {
-        onSelectionChange([...productosSeleccionados, productoId]);
-      }
-    };
 
-    const toggleTodos = () => {
-      if (productosSeleccionados.length === productos.length) {
-        onSelectionChange([]);
-      } else {
-        onSelectionChange(productos.map(p => p.id));
-      }
-    };
+  if (!loteSeleccionado) return null;
 
+  const etapaConfig = ETAPAS_FLUJO[etapaActual];
+  const productosDisponibles = getProductosParaEtapa(etapaActual, loteSeleccionado);
+
+  const getEstadoVisual = (etapa: keyof typeof ETAPAS_FLUJO): 'COMPLETADA' | 'ACTIVA' | 'FUTURA' => {
+    const orden = ['REGISTRADO','EMBARCADO','DESEMBARCADO','NACIONALIZADO','EN_DISTRIBUCION','PRODUCTO_ADQUIRIDO'];
+    const total = loteSeleccionado.productos.length;
+    const completados = loteSeleccionado.productos.filter(p => orden.indexOf(p.estado) >= orden.indexOf(ETAPAS_FLUJO[etapa].estado)).length;
+    if (completados === total) return 'COMPLETADA';
+    const anterior = getEstadoAnterior(ETAPAS_FLUJO[etapa].estado);
+    if (anterior && loteSeleccionado.productos.some(p => p.estado === anterior)) return 'ACTIVA';
+    return 'FUTURA';
+  };
+
+  const estadosProductos = loteSeleccionado.productos.reduce((acc, p) => { acc[p.estado]=(acc[p.estado]||0)+1; return acc; }, {} as Record<EstadoEvento,number>);
+  const estadosBadges = (['REGISTRADO','EMBARCADO','DESEMBARCADO','NACIONALIZADO','EN_DISTRIBUCION','PRODUCTO_ADQUIRIDO'] as EstadoEvento[])
+    .filter(e => estadosProductos[e] > 0)
+    .map(e => ({ estado: e, label: { REGISTRADO:'Registrados',EMBARCADO:'Embarcados',DESEMBARCADO:'Desembarcados',NACIONALIZADO:'Nacionalizados',EN_DISTRIBUCION:'En Distribución',PRODUCTO_ADQUIRIDO:'Vendidos' }[e], count: estadosProductos[e] }));
+
+  // ── Sub-componente ProductSelector ──
+  const ProductSelector: React.FC<{ productos: ProductoBackend[]; seleccionados: string[]; onChange: (s:string[])=>void }> = ({ productos, seleccionados, onChange }) => {
+    const toggle = (id: string) => onChange(seleccionados.includes(id) ? seleccionados.filter(x=>x!==id) : [...seleccionados, id]);
     return (
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium text-gray-700">
-            Seleccionar productos ({productosSeleccionados.length}/{productos.length})
-          </h4>
-          <button
-            type="button"
-            onClick={toggleTodos}
-            className="text-sm text-blue-600 hover:text-blue-800"
-          >
-            {productosSeleccionados.length === productos.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Seleccionar ({seleccionados.length}/{productos.length})</span>
+          <button type="button" onClick={() => onChange(seleccionados.length===productos.length ? [] : productos.map(p=>p.id))} className="cursor-pointer text-xs text-blue-600 hover:text-blue-800 font-medium">
+            {seleccionados.length===productos.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
-          {productos.map((producto) => (
-            <div
-              key={producto.id}
-              className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                productosSeleccionados.includes(producto.id)
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-              onClick={() => toggleProducto(producto.id)}
-            >
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={productosSeleccionados.includes(producto.id)}
-                  onChange={() => toggleProducto(producto.id)}
-                  className="rounded"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {producto.marca} {producto.modelo}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    IMEI: {producto.imeiSerial}
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1">
+          {productos.map(p => (
+            <div key={p.id} onClick={() => toggle(p.id)}
+              className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer transition-all ${seleccionados.includes(p.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <input type="checkbox" checked={seleccionados.includes(p.id)} onChange={() => toggle(p.id)} className="rounded accent-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-800 truncate">{p.marca} {p.modelo}</p>
+                <p className="text-xs text-gray-400">IMEI: {p.imeiSerial}</p>
               </div>
             </div>
           ))}
@@ -586,381 +192,229 @@ const ProgressIndicator: React.FC = () => {
     );
   };
 
+  // ── Sub-componente EventForm ──
   const EventForm: React.FC = () => {
-    const handleUseLocation = async () => {
-      await captureBrowserLocation();
-    };
-    
-    const [formData, setFormData] = useState<EventFormData>({
-      punto: '',
-      latitud: '',
-      longitud: '',
-      contenedor: '',
-      tipoTransporte: '',
-      dim: '',
-      valorCIF: '',
-      totalPagado: '',
-      comerciante: '',
-      productosSeleccionados: []
-    });
+    const [fd, setFd] = useState<EventFormData>({ punto:'', latitud:'', longitud:'', contenedor:'', tipoTransporte:'', dim:'', valorCIF:'', totalPagado:'', comerciante:'', productosSeleccionados:[] });
+    const set = (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) => setFd(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const inp = "w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50";
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
-      setFormData({
-        ...formData,
-        [e.target.name]: e.target.value
-      });
-    };
-
-    const handleProductSelectionChange = (seleccionados: string[]) => {
-      setFormData({
-        ...formData,
-        productosSeleccionados: seleccionados
-      });
-    };
-
-    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
-      e.preventDefault();
-      handleSubmit(formData);
-    };
-
-    useEffect(() => {
-      if (coords) {
-        setFormData(prev => ({
-          ...prev,
-          latitud: coords.lat.toString(),
-          longitud: coords.lon.toString()
-        }));
-      }
-    }, [coords]);
+    useEffect(() => { if (coords) setFd(prev => ({ ...prev, latitud: coords.lat.toString(), longitud: coords.lon.toString() })); }, []);
 
     return (
-      <form onSubmit={handleFormSubmit} className="space-y-6">
-        {etapaConfig.esDinamico && productosDisponibles.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <ProductSelector
-              productos={productosDisponibles}
-              productosSeleccionados={formData.productosSeleccionados}
-              onSelectionChange={handleProductSelectionChange}
-            />
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Punto/Ubicación *
-            </label>
-            <input
-              type="text"
-              name="punto"
-              value={formData.punto}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Ej: Puerto Shanghai, Aduana Tambo Quemado"
-              required
-              disabled={submitting}
-            />
-          </div>
+      <form onSubmit={e => { e.preventDefault(); handleSubmit(fd); }} className="flex flex-col h-full">
+        <div className="flex-1 space-y-3 overflow-y-auto">
+          {etapaConfig.esDinamico && productosDisponibles.length > 0 && (
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
+              <ProductSelector productos={productosDisponibles} seleccionados={fd.productosSeleccionados} onChange={s => setFd(prev => ({ ...prev, productosSeleccionados: s }))} />
+            </div>
+          )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Latitud *</label>
-            <input
-              type="text"
-              name="latitud"
-              value={formData.latitud}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
-              disabled={submitting}
-            />
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Punto / Ubicación *</label>
+            <input name="punto" value={fd.punto} onChange={set} className={inp} placeholder="Ej: Puerto Shanghai, Aduana Tambo Quemado" required disabled={submitting} />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Longitud *</label>
-            <input
-              type="text"
-              name="longitud"
-              value={formData.longitud}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              required
-              disabled={submitting}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Latitud *</label>
+              <input name="latitud" value={fd.latitud} onChange={set} className={inp} required disabled={submitting} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Longitud *</label>
+              <input name="longitud" value={fd.longitud} onChange={set} className={inp} required disabled={submitting} />
+            </div>
           </div>
 
-          {etapaActual === 'EMBARQUE' && (
-            <>
+          {etapaActual==='EMBARQUE' && (
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Transporte</label>
-                <select
-                  name="tipoTransporte"
-                  value={formData.tipoTransporte}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={submitting}
-                >
-                  <option value="">Seleccionar</option>
-                  <option value="Marítimo">Marítimo</option>
-                  <option value="Aéreo">Aéreo</option>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo de transporte</label>
+                <select name="tipoTransporte" value={fd.tipoTransporte} onChange={set} className={inp} disabled={submitting}>
+                  <option value="">Seleccionar</option><option value="Marítimo">Marítimo</option><option value="Aéreo">Aéreo</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número de Contenedor</label>
-                <input
-                  type="text"
-                  name="contenedor"
-                  value={formData.contenedor}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="ABCD1234567"
-                  disabled={submitting}
-                />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nº Contenedor</label>
+                <input name="contenedor" value={fd.contenedor} onChange={set} className={inp} placeholder="ABCD1234567" disabled={submitting} />
               </div>
-            </>
+            </div>
           )}
 
-          {etapaActual === 'NACIONALIZACION' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">DIM</label>
-                <input
-                  type="text"
-                  name="dim"
-                  value={formData.dim}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="123-456-789"
-                  disabled={submitting}
-                />
+          {etapaActual==='NACIONALIZACION' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">DIM</label>
+                  <input name="dim" value={fd.dim} onChange={set} className={inp} placeholder="123-456-789" disabled={submitting} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Valor CIF (USD)</label>
+                  <input type="number" name="valorCIF" value={fd.valorCIF} onChange={set} className={inp} disabled={submitting} />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valor CIF Total del Lote (USD)</label>
-                <input
-                  type="number"
-                  name="valorCIF"
-                  value={formData.valorCIF}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={submitting}
-                />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Total pagado en Aduana (USD)</label>
+                <input type="number" name="totalPagado" value={fd.totalPagado} onChange={set} className={inp} disabled={submitting} />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Total Pagado en Aduana (USD)</label>
-                <input
-                  type="number"
-                  name="totalPagado"
-                  value={formData.totalPagado}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  disabled={submitting}
-                />
-              </div>
-            </>
+            </div>
           )}
 
-          {etapaActual === 'DISTRIBUCION' && (
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Comerciante/Distribuidor *</label>
-              <input
-                type="text"
-                name="comerciante"
-                value={formData.comerciante}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Nombre del comerciante o tienda"
-                required
-                disabled={submitting}
-              />
+          {etapaActual==='DISTRIBUCION' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Comerciante / Distribuidor *</label>
+              <input name="comerciante" value={fd.comerciante} onChange={set} className={inp} placeholder="Nombre del comerciante o tienda" required disabled={submitting} />
             </div>
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center pt-6 border-t border-gray-200 space-y-4 sm:space-y-0">
-          <button
-            type="button"
-            onClick={() => router.push('/lotes')}
-            className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            disabled={submitting}
-          >
-            Volver a Lotes
+        <div className="pt-4 mt-2 border-t border-gray-100 flex items-center gap-2 flex-shrink-0">
+          <button type="button" onClick={() => captureBrowserLocation()}
+            className="cursor-pointer flex items-center gap-1.5 px-3 py-2 text-xs text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition-colors flex-shrink-0" disabled={submitting}>
+            <MapPin size={13} /> Ubicación actual
           </button>
-          <button
-            type="button"
-            onClick={handleUseLocation}
-            className="flex items-center space-x-2 px-4 py-3 text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition-colors"
-            disabled={submitting}
-          >
-            <MapPin size={18} />
-            <span>Usar ubicación actual</span>
-          </button>
-          <button
-            type="submit"
-            className={`px-4 py-3 ${etapaConfig.bgColor} text-white rounded-lg hover:opacity-90 transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed`}
-            disabled={submitting || (etapaConfig.esDinamico && formData.productosSeleccionados.length === 0)}
-          >
-            {submitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Procesando...</span>
-              </>
-            ) : (
-              <>
-                <etapaConfig.icon className="w-4 h-4" />
-                <span>
-                  Registrar {etapaConfig.titulo}
-                  {etapaConfig.esDinamico && formData.productosSeleccionados.length > 0 && 
-                    ` (${formData.productosSeleccionados.length} productos)`
-                  }
-                </span>
-              </>
-            )}
+          <button type="submit"
+            className={`cursor-pointer flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${etapaConfig.bgColor} hover:opacity-90`}
+            disabled={submitting || (etapaConfig.esDinamico && fd.productosSeleccionados.length===0)}>
+            {submitting
+              ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Procesando...</span></>
+              : <><etapaConfig.icon className="w-4 h-4" /><span>Registrar {etapaConfig.titulo}{etapaConfig.esDinamico && fd.productosSeleccionados.length>0 && ` (${fd.productosSeleccionados.length})`}</span></>
+            }
           </button>
         </div>
       </form>
     );
   };
 
-  const EstadisticasLote: React.FC = () => {
-    const estadosProductos = loteSeleccionado.productos.reduce((acc, producto) => {
-      acc[producto.estado] = (acc[producto.estado] || 0) + 1;
-      return acc;
-    }, {} as Record<EstadoEvento, number>);
-
-    const estadosOrdenados: { estado: EstadoEvento; label: string }[] = [
-      { estado: 'REGISTRADO', label: 'Registrados' },
-      { estado: 'EMBARCADO', label: 'Embarcados' },
-      { estado: 'DESEMBARCADO', label: 'Desembarcados' },
-      { estado: 'NACIONALIZADO', label: 'Nacionalizados' },
-      { estado: 'EN_DISTRIBUCION', label: 'En Distribución' },
-      { estado: 'PRODUCTO_ADQUIRIDO', label: 'Vendidos' }
-    ];
-
-    const estadosConProductos = estadosOrdenados.filter(({ estado }) => {
-      const cantidad = estadosProductos[estado] || 0;
-      return cantidad > 0;
-    });
-
-    if (estadosConProductos.length === 0) {
-      return (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de los Productos</h3>
-          <p className="text-gray-500 text-center py-8">No hay productos en este lote</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de los Productos</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {estadosConProductos.map(({ estado, label }) => {
-            const cantidad = estadosProductos[estado] || 0;
-            const colors = COLOR_MAP[estado];
-            return (
-              <div key={estado} className={`${colors.bg} p-4 rounded-lg text-center`}>
-                <div className={`text-2xl font-bold ${colors.textBold}`}>
-                  {cantidad}
-                </div>
-                <div className={`text-sm ${colors.text} font-medium`}>
-                  {label}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR', 'TRANSPORTISTA', 'ADUANA', 'DISTRIBUIDOR']}>
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Box className="w-8 h-8 text-blue-600" />
+      <div className="flex flex-col h-full gap-4">
+
+        {/* ── Top bar ── */}
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-gray-200 px-4 py-3 shadow-sm flex-shrink-0 flex-wrap gap-y-2">
+          <button onClick={() => router.push('/lotes')} className="cursor-pointer p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors flex-shrink-0">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div className="w-px h-7 bg-gray-200 flex-shrink-0" />
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Box className="w-6 h-6 text-blue-600" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gestión de Lote</h1>
-              <div className="flex items-center space-x-2 mt-1">
-                <span className="text-lg font-semibold text-blue-600">{loteSeleccionado.lote}</span>
-                <span className="text-gray-400">•</span>
-                <span className="text-gray-700">{loteSeleccionado.marca} {loteSeleccionado.modelo}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-900 text">{loteSeleccionado.lote}</span>
+                <span className="text-gray-400 text">•</span>
+                <span className="text-gray-600 text truncate">{loteSeleccionado.marca} {loteSeleccionado.modelo}</span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">ID: {loteSeleccionado.id}</p>
+              <p className="text-xs text-gray-400 font-mono truncate">{loteSeleccionado.id}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-6 text-center lg:text-right">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center justify-center lg:justify-end space-x-2 mb-1">
-                <Package className="w-5 h-5 text-blue-600" />
-                <span className="text-sm text-blue-600 font-medium">Productos en Lote</span>
-              </div>
-              <div className="text-2xl font-bold text-blue-800">{loteSeleccionado.cantidadProductos}</div>
-              <div className="text-xs text-blue-600">unidades</div>
+          {/* Badges de stats */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 rounded-lg">
+              <Package className="w-4 h-4 text-blue-600" />
+              <span className="text-sm text-blue-700">{loteSeleccionado.cantidadProductos} Unidades</span>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="flex items-center justify-center lg:justify-end space-x-2 mb-1">
-                <Calendar className="w-5 h-5 text-green-600" />
-                <span className="text-sm text-green-600 font-medium">Creado</span>
-              </div>
-              <div className="text-lg font-semibold text-green-800">
-                {new Date(loteSeleccionado.fechaCreacion).toLocaleDateString('es-BO')}
-              </div>
-              <div className="text-xs text-green-600">fecha de registro</div>
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-200">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-500">{new Date(loteSeleccionado.fechaCreacion).toLocaleDateString('es-BO')}</span>
             </div>
+            {estadosBadges.map(({ estado, label, count }) => {
+              const c = COLOR_MAP[estado];
+              return (
+                <div key={estado} className={`px-2.5 py-1 rounded-lg ${c.bg} flex items-center gap-1`}>
+                  <span className={`text-sm font-bold ${c.textBold}`}>{count}</span>
+                  <span className={`text-sm ${c.text}`}>{label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
 
-      <EstadisticasLote />
+        {/* ── Cuerpo 2 columnas ── */}
+        <div className="flex gap-4 flex-1 min-h-0">
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Progreso del Proceso</h3>
-        <p className="text-sm text-gray-600 mb-4">Haz clic en una etapa con productos pendientes para procesarla</p>
-        <ProgressIndicator />
-      </div>
+          {/* Columna izquierda: progreso vertical */}
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 h-full">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Etapas del proceso</p>
+              <div className="space-y-1">
+                {(Object.keys(ETAPAS_FLUJO) as Array<keyof typeof ETAPAS_FLUJO>).map((etapa, i, arr) => {
+                  const cfg = ETAPAS_FLUJO[etapa];
+                  const Icon = cfg.icon;
+                  const visual = getEstadoVisual(etapa);
+                  const isActiva = visual === 'ACTIVA';
+                  const isCompletada = visual === 'COMPLETADA';
+                  const isSelected = etapaActual === etapa;
 
-      {productosDisponibles.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <div className={`p-3 rounded-xl ${etapaConfig.bgColorLight} shadow-sm`}>
-                <etapaConfig.icon size={32} className={etapaConfig.textColor} />
+                  return (
+                    <div key={etapa}>
+                      <button type="button"
+                        onClick={() => { if (isActiva) setEtapaActual(etapa); }}
+                        disabled={!isActiva}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${
+                          isSelected && isActiva ? `${cfg.bgColorLight} border ${cfg.borderColor} shadow-sm`
+                          : isCompletada          ? 'bg-green-50 border border-green-200'
+                          : isActiva              ? `${cfg.bgColorLight} border ${cfg.borderColor} hover:shadow-sm cursor-pointer`
+                          :                         'bg-gray-50 border border-transparent opacity-50 cursor-not-allowed'
+                        }`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isCompletada ? 'bg-green-500' : isActiva ? cfg.bgColor : 'bg-gray-300'}`}>
+                          {isCompletada ? <CheckCircle size={13} className="text-white" /> : <Icon size={13} className="text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${isCompletada ? 'text-green-700' : isActiva ? cfg.textColorDark : 'text-gray-400'}`}>{cfg.titulo}</p>
+                          <p className={`text-sm ${isCompletada ? 'text-green-500' : isActiva ? 'text-amber-600' : 'text-gray-400'}`}>
+                            {isCompletada ? '✓ Completado' : isActiva ? 'Pendiente' : 'Esperando'}
+                          </p>
+                        </div>
+                        {isSelected && isActiva && <div className={`w-1.5 h-1.5 rounded-full bg-current ${cfg.textColor} flex-shrink-0`} />}
+                      </button>
+                      {i < arr.length - 1 && (
+                        <div className={`ml-6 w-px h-2 my-0.5 ${isCompletada ? 'bg-green-300' : 'bg-gray-200'}`} />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">Registrar {etapaConfig.titulo}</h2>
-                <p className="text-gray-600 mt-1">{etapaConfig.descripcion}</p>
-                <div className="text-sm text-blue-600 font-medium mt-2">
-                  {etapaConfig.esDinamico 
-                    ? `${productosDisponibles.length} productos disponibles para esta etapa`
-                    : `Este evento se aplicará a todos los productos del lote`
-                  }
+            </div>
+          </div>
+
+          {/* Columna derecha: formulario */}
+          <div className="flex-1 min-w-0">
+            {productosDisponibles.length > 0 ? (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 h-full flex flex-col">
+                <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+                  <div className={`w-10 h-10 rounded-xl ${etapaConfig.bgColorLight} flex items-center justify-center flex-shrink-0`}>
+                    <etapaConfig.icon size={30} className={etapaConfig.textColor} />
+                  </div>
+                  <div>
+                    <h2 className="text font-bold text-gray-900">Registrar {etapaConfig.titulo}</h2>
+                    <p className="text-xs text-gray-500">{etapaConfig.descripcion}</p>
+                    <p className={`text-xs font-medium mt-0.5 ${etapaConfig.textColor}`}>
+                      {etapaConfig.esDinamico ? `${productosDisponibles.length} productos disponibles` : 'Se aplica a todos los productos del lote'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <EventForm />
                 </div>
               </div>
-            </div>
-          </div>
-          <EventForm />
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="text-center py-8">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Lote Procesado</h2>
-            <p className="text-gray-600 mb-6">
-              Todos los productos han completado su proceso correspondiente.
-            </p>
-            <button
-              onClick={() => router.push('/lotes')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Volver a Lotes
-            </button>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle className="w-7 h-7 text-green-500" />
+                  </div>
+                  <h2 className="text-base font-bold text-gray-900 mb-1">Lote Procesado</h2>
+                  <p className="text-sm text-gray-400 mb-4">Todos los productos completaron su proceso.</p>
+                  <button onClick={() => router.push('/lotes')} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                    Volver a Lotes
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </div>
+      </div>
     </RoleGuard>
   );
 }

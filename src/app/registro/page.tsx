@@ -32,7 +32,7 @@ export default function RegistroPage() {
     paisOrigen: 'China',
     coordenadas: { lat: '', lon: '' }
   });
-  
+  const [loading, setLoading] = useState(false);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [step, setStep] = useState<number>(1);
 
@@ -45,21 +45,21 @@ export default function RegistroPage() {
       if (isNaN(value) || value < 1) value = 1; // evitar errores
     }
 
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [e.target.name]: value
-    });
+    }));
 
     if (e.target.name === 'cantidadProductos') {
       const cantidad = value as number;
-
+    
       const newProductos: Producto[] = Array.from({ length: cantidad }, (_, i) => ({
         id: i + 1,
         modelo: '',
         marca: '',
         imeiSerial: '',
       }));
-
+    
       setProductos(newProductos);
     }
   };
@@ -71,12 +71,13 @@ export default function RegistroPage() {
     setProductos(updatedProductos);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    productos.map
-    TrazabilidadAPI.registroLote({
-      dispositivos: productos.map(producto => {
-        return {
+    setLoading(true);
+
+    try {
+      await TrazabilidadAPI.registroLote({
+        dispositivos: productos.map(producto => ({
           marca: producto.marca,
           modelo: producto.modelo,
           imeiSerial: producto.imeiSerial,
@@ -84,16 +85,17 @@ export default function RegistroPage() {
           longitud: formData.coordenadas.lon,
           origenPais: formData.paisOrigen,
           puntoControl: formData.puntoControl,
-        }
-      }),
-    })
-    console.log(formData);
-    console.log(productos)
-    const loteId = 'uuid-' + Date.now();
-    alert(`¡Lote registrado exitosamente!\n\nLote: ${loteId}\nProductos: ${formData.cantidadProductos}\nURL: trazabilidad.io/lote/${loteId}\n\nSe generaron ${formData.cantidadProductos} códigos QR individuales`);
-    
-    // Redirect to lotes page to manage the new batch
-    router.push('/lotes');
+        })),
+      });
+
+      router.push('/lotes');
+      router.refresh();
+
+    } catch (error) {
+      console.error('Error registrando lote:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUseLocation = async () => {
@@ -102,13 +104,13 @@ export default function RegistroPage() {
 
   useEffect(() => {
     if (coords?.lat && coords?.lon) {
-      setFormData({
-        ...formData,
-        coordenadas:{
-          lat:coords.lat.toString(),
-          lon:coords.lat.toString(),
+      setFormData(prev => ({
+        ...prev,
+        coordenadas: {
+          lat: coords.lat.toString(),
+          lon: coords.lon.toString(),
         }
-      });
+      }));
     }
   }, [coords]);
   // Inicializar productos cuando cambia la cantidad
@@ -212,7 +214,6 @@ export default function RegistroPage() {
                       </div>
                       <div>
                         <h4 className="font-medium text-gray-900">Producto #{producto.id}</h4>
-                        {/* <p className="text-sm text-gray-500">{formData.marca} {formData.modelo}</p> */}
                       </div>
                     </div>
                     
@@ -341,7 +342,7 @@ export default function RegistroPage() {
               </button>
             ) : (
               <div>
-<button
+          <button
             type="button"
             onClick={handleUseLocation}
             className="flex items-center space-x-2 px-4 py-3 text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition-colors"
@@ -349,13 +350,18 @@ export default function RegistroPage() {
             <MapPin size={18} />
             <span>Usar ubicación actual</span>
           </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-                >
-                <CheckCircle className="w-4 h-4" />
-                <span>Registrar Lote de {formData.cantidadProductos} Productos</span>
-              </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`px-6 py-2 rounded-lg flex items-center space-x-2 ${
+                      loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
+                    } text-white`}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span>
+                      {loading ? 'Registrando...' : `Registrar Lote de ${formData.cantidadProductos} Productos`}
+                    </span>
+                  </button>
                 </div>
             )}
           </div>
