@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 // closeButton
                 duration={5000}
               />
-              {/* <Header /> */}
+              <Header />
               <main className="flex-1 overflow-auto p-3">
                 {children}
               </main>

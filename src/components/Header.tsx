@@ -72,14 +72,6 @@ export const Header: React.FC = () => {
             <span className="text-xs text-gray-400 hidden sm:block">
               {getSaludo()}{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''}&nbsp;·&nbsp;
             </span>
-            {crumbs.map((crumb, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />}
-                <span className={`text-xs truncate ${crumb.isLast ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>
-                  {crumb.label}
-                </span>
-              </React.Fragment>
-            ))}
           </>
         )}
       </div>
@@ -91,32 +83,21 @@ export const Header: React.FC = () => {
           <span className="text-xs text-gray-400 hidden lg:block">&nbsp;{fecha}</span>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+        {/* <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
           <span className="relative flex h-2 w-2 flex-shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
           <Activity className="w-3.5 h-3.5 text-green-600" />
           <span className="text-xs font-medium text-green-700">Blockchain activo</span>
-        </div>
+        </div> */}
 
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+        {/* <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
           <Wifi className="w-3.5 h-3.5 text-blue-500" />
           <span className="text-xs font-medium text-blue-700">Hyperledger Fabric</span>
-        </div>
+        </div> */}
 
-        <div className="w-px h-5 bg-gray-200" />
-
-        {user?.rol && (
-          <span className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${rolBadgeClass}`}>
-            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-            {user.rol}
-          </span>
-        )}
-
-        <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-          <span className="text-xs font-bold text-white">{inicial}</span>
-        </div>
+        
       </div>
     </header>
   );

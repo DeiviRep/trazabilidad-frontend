@@ -13,7 +13,8 @@ export type CreateDispositivoDto = {
   modelo: string;
   marca: string;
   imeiSerial: string;
-  origenPais: string;
+  // CORREGIDO: era 'origenPais', el backend DTO usa 'paisOrigen'
+  paisOrigen: string;
   latitud: string;
   longitud: string;
   uuidLote?: string;
@@ -39,14 +40,17 @@ export type EventoPayload = {
   // EMBARQUE
   nroContenedor?: string;
   tipoTransporte?: string;
+  blAwb?: string;             // NUEVO: Bill of Lading (maritimo) o Air Waybill (aereo)
 
   // DESEMBARQUE
   integridad?: boolean;
   descripcionIntegridad?: string;
+  documentoTransito?: string; // NUEVO: numero DUS (Chile) o DTI (Peru)
 
   // NACIONALIZACION
   dim?: string;
-  valorCIF?: number;   // compatibilidad con chaincode
+  dam?: string;               // NUEVO: numero DAM
+  valorCIF?: number;
   totalPagado?: number;
   arancel?: number;
   iva?: number;
@@ -54,9 +58,11 @@ export type EventoPayload = {
 
   // DISTRIBUCION
   comerciante?: string;
+  responsable?: string;       // NUEVO: responsable de recepcion
 
   // ADQUIRIDO
-  fechaCompra?: string; // ISO
+  tienda?: string;            // NUEVO: nombre de la tienda
+  fechaCompra?: string;       // ISO
 };
 
 export type EventoLotePayload = {
