@@ -109,6 +109,7 @@ const ProductosModal: React.FC<ProductosModalProps> = ({ isOpen, onClose, lote, 
         setQrModalOpen(true);
         return;
       }
+      // await TrazabilidadAPI.generarQR(id);
     
       const response = await TrazabilidadAPI.obtenerQRBase64(id);
     

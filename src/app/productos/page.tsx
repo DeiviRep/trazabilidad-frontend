@@ -5,6 +5,7 @@ import { Plus, Package, Eye, QrCode } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 import QRModal from '@/components/QRModal';
 import RoleGuard from '@/components/RoleGuard';
+import { Header } from '@/components/Header';
 
 export interface DataProductType {
   lote: string
@@ -76,6 +77,7 @@ export default function ProductosPage() {
 const handleOpenQrModal = async (id: string) => {
   try {
     // 🔥 INTENTA BASE64 PRIMERO (DEFAULT)
+    // await TrazabilidadAPI.generarQR(id);
     const response = await TrazabilidadAPI.obtenerQRBase64(id);
 
     if (response?.base64) {
@@ -114,14 +116,11 @@ const handleOpenQrModal = async (id: string) => {
 
   return (
       <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR']}>
+        {/* <Header /> */}
     <div className="space-y-6">
       <QRModal onClose={ () => setQrModalOpen(false)} open={qrModalOpen} imageUrl={qrImage}/>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <h2 className="text-2xl font-bold text-gray-900">Lista de Productos</h2>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-          <Plus className="w-4 h-4" />
-          <span>Nuevo Producto</span>
-        </button>
       </div>
       
       <div className="bg-white rounded-lg shadow-md p-6">
