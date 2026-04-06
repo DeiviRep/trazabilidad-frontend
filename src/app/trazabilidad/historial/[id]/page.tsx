@@ -128,7 +128,9 @@ function EventoDetalle({ evento }: { evento: Evento }) {
             }
           />
           {evento.descripcionIntegridad && (
-            <p className="text-xs text-gray-500 mt-1 italic">"{evento.descripcionIntegridad}"</p>
+            <p className="text-xs text-gray-500 mt-1 italic">
+              {"\"" + evento.descripcionIntegridad + "\""}
+            </p>
           )}
         </div>
       );
