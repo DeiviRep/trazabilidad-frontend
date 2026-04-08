@@ -305,3 +305,205 @@ BEGIN
 
     END CATCH
 END;
+
+Casos de prueba
+14 casos
+Todos
+✓ Positivos
+✕ Error esperado
+⚠ Borde
+🔴 Críticos
+Casos positivos — happy path
+Resultado esperado
+Todas las tablas procesadas. Filas en TBL_RESUMEN_EJECUCION_HISTORICO.
+Prioridad
+Alta
+Script SQL
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- Verificar resultado
+SELECT * FROM sst.TBL_RESUMEN_EJECUCION_HISTORICO
+WHERE FECHA_PROCESO = '20260228'
+  AND TIPO_HISTORICO = 'HIS'
+ORDER BY ID DESC;
+Notas
+Caso base. Confirmar que el número de filas por tabla es coherente con la tabla origen.
+Resultado esperado
+Filtro y SELECT generados solo con año/mes. Sin errores.
+Prioridad
+Alta
+Script SQL
+-- Configurar tabla de prueba con C_DIA=NULL y C_VERSION=NULL
+UPDATE sst.TBL_CONFIG_HISTORICOS
+SET CAMPODIA = NULL, CAMPOVERSION = NULL
+WHERE TABLAORIGEN = 'TU_TABLA_PRUEBA';
+
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+Notas
+Valida que los campos opcionales NULL no rompan la construcción dinámica del WHERE.
+Resultado esperado
+Usa @P_VERSION_CIC en el filtro del DELETE e INSERT.
+Prioridad
+Media
+Script SQL
+-- Verificar que el SQL generado contenga la versión CIC
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28',
+    @P_VERSION_CIC = '2.13.0.0';
+
+-- El PRINT del SQL dinámico debe mostrar: WHERE [VersionCIC] = '2.13.0.0'
+Notas
+Revisar el output del PRINT en el log de SSIS para confirmar la versión correcta.
+Resultado esperado
+Usa @P_VERSION_01 ('01') en el filtro.
+Prioridad
+Media
+Script SQL
+-- Configurar una tabla con campo versión diferente de 'VersionCIC'
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28',
+    @P_VERSION_01 = '01';
+
+-- El PRINT debe mostrar: WHERE [OtroCampoVersion] = '01'
+Notas
+El CASE WHEN 'VersionCIC' THEN ... ELSE @P_VERSION_01 debe caer en el ELSE.
+Resultado esperado
+INSERT incluye WHERE fecha_corte = '2026-02-28'.
+Prioridad
+Alta
+Script SQL
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- Verificar que el SQL del INSERT en el log incluye el WHERE de fecha corte:
+-- INSERT INTO ... SELECT ... FROM origen WHERE [FechaCorte] = '2026-02-28'
+Notas
+Sin este filtro el INSERT copiaría toda la tabla origen al histórico.
+Resultado esperado
+DELETE previo + INSERT correcto. Sin duplicados. Resultado igual al primer run.
+Prioridad
+Alta
+Script SQL
+-- Primera ejecución
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- Segunda ejecución (mismo período)
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- Las filas en el histórico deben ser las mismas que tras la primera ejecución
+SELECT COUNT(*) FROM sst.TU_TABLA_HISTORICA
+WHERE ANIO = '2026' AND MES = '02';
+Notas
+Crítico para SSIS: si el paquete se reintenta no debe duplicar el histórico.
+Resultado esperado
+Loop completo, 5 entradas en TBL_RESUMEN_EJECUCION_HISTORICO.
+Prioridad
+Media
+Script SQL
+-- Verificar que el número de inserts en el resumen coincide
+SELECT COUNT(*) AS TablasProcesadas
+FROM sst.TBL_RESUMEN_EJECUCION_HISTORICO
+WHERE FECHA_PROCESO = '20260228'
+  AND TIPO_HISTORICO = 'HIS';
+-- Debe ser = número de filas ACTIVO=1 en TBL_CONFIG_HISTORICOS
+Notas
+Verificar que el @Contador llega hasta el final sin saltos.
+Casos de error esperado
+Resultado esperado
+RETURN 0 con mensaje INFO. No procesa nada. No hay error.
+Prioridad
+Alta
+Script SQL
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260215', '2026', '02', '15';
+
+-- Debe imprimir:
+-- INFO: La fecha 20260215 no es fin de mes. SE OMITE EL PROCESO.
+-- NO debe haber filas nuevas en TBL_RESUMEN_EJECUCION_HISTORICO
+Notas
+Validación de negocio. El SP termina limpio, no rompe el paquete SSIS.
+Resultado esperado
+ERROR con mensaje claro. RETURN -1.
+Prioridad
+Alta
+Script SQL
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '99991399', '9999', '13', '99';
+
+-- Debe lanzar:
+-- ERROR: @P_FECHA_PROCESO no es una fecha válida: "99991399". Use formato YYYYMMDD.
+Notas
+TRY_CAST devuelve NULL para fechas imposibles. La validación debe capturarlo antes de cualquier operación.
+Resultado esperado
+ERROR con detalle de qué parámetro no coincide. RETURN -1.
+Prioridad
+Alta
+Script SQL
+-- Mes no coincide con la fecha
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '03', '28';
+
+-- Debe lanzar:
+-- ERROR: @P_ANIO/2026, @P_MES/03, @P_DIA/28 no coinciden con @P_FECHA_PROCESO/20260228
+Notas
+Protege contra errores de parametrización en el paquete SSIS donde los 4 params se configuran por separado.
+Resultado esperado
+ADVERTENCIA y RETURN 0. Sin crash silencioso.
+Prioridad
+Media
+Script SQL
+-- Desactivar todas las tablas para la prueba
+UPDATE sst.TBL_CONFIG_HISTORICOS
+SET ACTIVO = 0 WHERE TIPOHISTORICO = 'HIS';
+
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- Debe imprimir la ADVERTENCIA y terminar limpio
+-- Restaurar
+UPDATE sst.TBL_CONFIG_HISTORICOS
+SET ACTIVO = 1 WHERE TIPOHISTORICO = 'HIS';
+Notas
+Antes de la corrección el SP terminaba 'exitosamente' sin hacer nada ni avisar.
+Casos críticos — daño potencial en producción
+Resultado esperado
+ERROR con nombre de tabla. ROLLBACK de todo lo ya procesado.
+Prioridad
+Alta
+Script SQL
+-- Insertar fila de config con tabla destino inexistente
+INSERT INTO sst.TBL_CONFIG_HISTORICOS
+VALUES ('sst','TablaOrigenReal','sst.TABLA_QUE_NO_EXISTE',
+        'ANIO','MES','DIA',NULL,NULL,'HIS',1);
+
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- DEBE: lanzar error Y revertir tablas ya procesadas antes de este registro
+-- ROLLBACK verifica con:
+SELECT COUNT(*) FROM sst.TBL_RESUMEN_EJECUCION_HISTORICO
+WHERE FECHA_PROCESO = '20260228';
+-- Debe ser 0 (todo revertido)
+Notas
+Crítico: sin transacción, las tablas procesadas antes del error quedan modificadas pero las siguientes no. Estado inconsistente.
+Resultado esperado
+ERROR CRÍTICO antes del DELETE. Nunca ejecutar DELETE sin WHERE.
+Prioridad
+Alta
+Script SQL
+-- Configurar una fila con todos los campos de filtro en NULL
+INSERT INTO sst.TBL_CONFIG_HISTORICOS
+VALUES ('sst','TablaOrigen','sst.TablaHistorica',
+        NULL, NULL, NULL, NULL, NULL, 'HIS', 1);
+
+EXEC sst.IS_SP_RE_PROCESAR_HISTORICO_ACUMULADO
+    '20260228', '2026', '02', '28';
+
+-- Debe lanzar:
+-- ERROR CRÍTICO: Filtro WHERE vacío para "sst.TablaHistorica".
+-- DELETE sin WHERE abortado por seguridad.
+-- Y ROLLBACK de todo
