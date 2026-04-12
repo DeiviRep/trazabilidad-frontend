@@ -267,6 +267,20 @@ export const TrazabilidadAPI = {
     const { data } = await api.get(`/trazabilidad/qr-base64/${id}`);
     return data;
   },
+  actualizarCampoEvento: async (
+    productoId: string,
+    indexEvento: number,
+    campos: Record<string, any>,
+  ) => {
+    try {
+      const { data } = await withLoadingDelay(
+        api.patch('/trazabilidad/evento/campo', { productoId, indexEvento, campos })
+      );
+      return data;
+    } catch (error) {
+      throw handleApiError(error, 'Error al actualizar campo del evento');
+    }
+  },
 };
 
 export default api;

@@ -9,6 +9,10 @@ import {
   Container, Globe, Tag
 } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
+import { useExportarPDF } from '@/hooks/useExportarPDF';
+import { ModalPDF } from '@/components/ModalPDF';
+import { ModalEditarEvento } from '@/components/ModalEditarEvento';
+import { useHasRole } from '@/context/AuthContext';
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer    = dynamic(() => import('react-leaflet').then(m => m.TileLayer),    { ssr: false });
@@ -49,6 +53,7 @@ interface DispositivoDataType {
   id: string;
   marca: string;
   modelo: string;
+  paisOrigen: string;
   imeiSerial: string;
   estado: EstadoEvento;
   urlLote: string;
@@ -236,6 +241,13 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
   const { id: idProducto } = use(params);
   const [data, setData] = useState<DispositivoDataType>({} as DispositivoDataType);
   const [loading, setLoading] = useState(true);
+  const { exportar, exportando } = useExportarPDF();
+  const [pdfModal, setPdfModal] = useState<{ url: string; filename: string } | null>(null);
+  const esAdmin = useHasRole('ADMIN');
+  const [eventoEditando, setEventoEditando] = useState<{
+    index: number;
+    evento: Evento;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -322,8 +334,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                 <ExternalLink className="w-3.5 h-3.5" /> Ver lote
               </a>
             )}
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium">
-              <Download className="w-4 h-4" /> Exportar
+            <button
+              onClick={async () => {
+                const result = await exportar(data);
+                if (result) setPdfModal(result);
+              }}
+              disabled={exportando}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {exportando
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando...</>
+                : <><Download className="w-4 h-4" /> Exportar</>
+              }
             </button>
           </div>
         </div>
@@ -444,6 +466,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                             </div>
                           )}
                         </div>
+                      {esAdmin && (
+                        <button
+                          onClick={() => setEventoEditando({ index, evento })}
+                          className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Editar evento
+                        </button>
+                      )}
                       </div>
                     </div>
                   );
@@ -501,6 +535,25 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
 
         </div>
       </div>
+      {pdfModal && (
+        <ModalPDF
+          url={pdfModal.url}
+          filename={pdfModal.filename}
+          onClose={() => setPdfModal(null)}
+        />
+      )}
+      {eventoEditando && (
+        <ModalEditarEvento
+          productoId={data.id}
+          indexEvento={eventoEditando.index}
+          evento={eventoEditando.evento}
+          onClose={() => setEventoEditando(null)}
+          onSuccess={(productoActualizado) => {
+            setData(productoActualizado);
+            setEventoEditando(null);
+          }}
+        />
+      )}
     </>
   );
 }
