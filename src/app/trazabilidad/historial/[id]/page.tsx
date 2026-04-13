@@ -244,15 +244,27 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
   const { exportar, exportando } = useExportarPDF();
   const [pdfModal, setPdfModal] = useState<{ url: string; filename: string } | null>(null);
   const esAdmin = useHasRole('ADMIN');
+  // junto a los otros useState
+  const [tieneAlteraciones, setTieneAlteraciones] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<{
     index: number;
     evento: Evento;
   } | null>(null);
-
+  
   useEffect(() => {
     (async () => {
-      try { setLoading(true); setData(await TrazabilidadAPI.consultar(idProducto)); }
-      catch (e) { console.error(e); }
+      try {
+        setLoading(true);
+        const producto = await TrazabilidadAPI.consultar(idProducto);
+        setData(producto);
+        try {
+          const integridad = await TrazabilidadAPI.verificarIntegridad(idProducto);
+          setTieneAlteraciones(!integridad.integridadOk);
+        } catch { 
+          setTieneAlteraciones(false); 
+        }
+
+      } catch (e) { console.error(e); }
       finally { setLoading(false); }
     })();
   }, [idProducto]);
@@ -344,7 +356,7 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
             >
               {exportando
                 ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando...</>
-                : <><Download className="w-4 h-4" /> Exportar</>
+                : <><Download className="w-4 h-4" /> Bitácora Blockchain</>
               }
             </button>
           </div>
@@ -364,9 +376,15 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                     <h2 className="text-sm font-bold text-gray-900">Historial de Trazabilidad</h2>
                     <p className="text-xs text-gray-400 mt-0.5">{data.eventos?.length || 0} registros · cadena de bloques inmutable</p>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                    <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-semibold text-green-700">Verificado</span>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
+                    tieneAlteraciones
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-green-50 border-green-200'
+                  }`}>
+                    <ShieldCheck className={`w-3.5 h-3.5 ${tieneAlteraciones ? 'text-red-600' : 'text-green-600'}`} />
+                    <span className={`text-xs font-semibold ${tieneAlteraciones ? 'text-red-700' : 'text-green-700'}`}>
+                      {tieneAlteraciones ? 'Con alteraciones' : 'Sin alteraciones'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -497,7 +515,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                     <span className="text-sm font-bold text-gray-900">Mapa de Trazabilidad</span>
                   </div>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-lg">
-                    {eventosValidos.length} puntos registrados
+                    {(() => {
+                      if (!primerEvento || !ultimoEvento) return `${eventosValidos.length} puntos`;
+                      const ms    = Math.abs(
+                        new Date(ultimoEvento.fecha).getTime() - new Date(primerEvento.fecha).getTime()
+                      );
+                      const dias  = Math.floor(ms / 86400000);
+                      const horas = Math.floor((ms % 86400000) / 3600000);
+                      if (dias > 0) return `${dias}d ${horas}h de recorrido`;
+                      if (horas > 0) return `${horas}h de recorrido`;
+                      const min = Math.floor(ms / 60000);
+                      return `${min}min de recorrido`;
+                    })()}
                   </span>
                 </div>
 
@@ -515,10 +544,6 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                         }`}>
                           <Icon className={`w-3.5 h-3.5 ${presente ? 'text-white' : 'text-gray-400'}`} />
                         </div>
-                        <span className={`mt-1.5 text-center leading-tight font-medium ${presente ? cfg.textClass : 'text-gray-400'}`}
-                          style={{ fontSize: '9px', maxWidth: '54px' }}>
-                          {cfg.label}
-                        </span>
                         {esActual && (
                         <span className={`absolute top-1/2 -translate-y-5 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full ${cfg.bgClass} border-2 border-white`}
                           style={{ animation: 'sonar-ring 1.6s ease-out infinite' }} />
