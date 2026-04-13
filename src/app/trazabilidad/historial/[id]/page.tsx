@@ -9,6 +9,10 @@ import {
   Container, Globe, Tag
 } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
+import { useExportarPDF } from '@/hooks/useExportarPDF';
+import { ModalPDF } from '@/components/ModalPDF';
+import { ModalEditarEvento } from '@/components/ModalEditarEvento';
+import { useHasRole } from '@/context/AuthContext';
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer    = dynamic(() => import('react-leaflet').then(m => m.TileLayer),    { ssr: false });
@@ -49,6 +53,7 @@ interface DispositivoDataType {
   id: string;
   marca: string;
   modelo: string;
+  paisOrigen: string;
   imeiSerial: string;
   estado: EstadoEvento;
   urlLote: string;
@@ -236,11 +241,30 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
   const { id: idProducto } = use(params);
   const [data, setData] = useState<DispositivoDataType>({} as DispositivoDataType);
   const [loading, setLoading] = useState(true);
-
+  const { exportar, exportando } = useExportarPDF();
+  const [pdfModal, setPdfModal] = useState<{ url: string; filename: string } | null>(null);
+  const esAdmin = useHasRole('ADMIN');
+  // junto a los otros useState
+  const [tieneAlteraciones, setTieneAlteraciones] = useState(false);
+  const [eventoEditando, setEventoEditando] = useState<{
+    index: number;
+    evento: Evento;
+  } | null>(null);
+  
   useEffect(() => {
     (async () => {
-      try { setLoading(true); setData(await TrazabilidadAPI.consultar(idProducto)); }
-      catch (e) { console.error(e); }
+      try {
+        setLoading(true);
+        const producto = await TrazabilidadAPI.consultar(idProducto);
+        setData(producto);
+        try {
+          const integridad = await TrazabilidadAPI.verificarIntegridad(idProducto);
+          setTieneAlteraciones(!integridad.integridadOk);
+        } catch { 
+          setTieneAlteraciones(false); 
+        }
+
+      } catch (e) { console.error(e); }
       finally { setLoading(false); }
     })();
   }, [idProducto]);
@@ -322,8 +346,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                 <ExternalLink className="w-3.5 h-3.5" /> Ver lote
               </a>
             )}
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium">
-              <Download className="w-4 h-4" /> Exportar
+            <button
+              onClick={async () => {
+                const result = await exportar(data);
+                if (result) setPdfModal(result);
+              }}
+              disabled={exportando}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {exportando
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando...</>
+                : <><Download className="w-4 h-4" /> Bitácora Blockchain</>
+              }
             </button>
           </div>
         </div>
@@ -342,9 +376,15 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                     <h2 className="text-sm font-bold text-gray-900">Historial de Trazabilidad</h2>
                     <p className="text-xs text-gray-400 mt-0.5">{data.eventos?.length || 0} registros · cadena de bloques inmutable</p>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg">
-                    <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
-                    <span className="text-xs font-semibold text-green-700">Verificado</span>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
+                    tieneAlteraciones
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-green-50 border-green-200'
+                  }`}>
+                    <ShieldCheck className={`w-3.5 h-3.5 ${tieneAlteraciones ? 'text-red-600' : 'text-green-600'}`} />
+                    <span className={`text-xs font-semibold ${tieneAlteraciones ? 'text-red-700' : 'text-green-700'}`}>
+                      {tieneAlteraciones ? 'Con alteraciones' : 'Sin alteraciones'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -444,6 +484,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                             </div>
                           )}
                         </div>
+                      {esAdmin && (
+                        <button
+                          onClick={() => setEventoEditando({ index, evento })}
+                          className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Editar evento
+                        </button>
+                      )}
                       </div>
                     </div>
                   );
@@ -463,7 +515,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                     <span className="text-sm font-bold text-gray-900">Mapa de Trazabilidad</span>
                   </div>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-lg">
-                    {eventosValidos.length} puntos registrados
+                    {(() => {
+                      if (!primerEvento || !ultimoEvento) return `${eventosValidos.length} puntos`;
+                      const ms    = Math.abs(
+                        new Date(ultimoEvento.fecha).getTime() - new Date(primerEvento.fecha).getTime()
+                      );
+                      const dias  = Math.floor(ms / 86400000);
+                      const horas = Math.floor((ms % 86400000) / 3600000);
+                      if (dias > 0) return `${dias}d ${horas}h de recorrido`;
+                      if (horas > 0) return `${horas}h de recorrido`;
+                      const min = Math.floor(ms / 60000);
+                      return `${min}min de recorrido`;
+                    })()}
                   </span>
                 </div>
 
@@ -481,10 +544,6 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                         }`}>
                           <Icon className={`w-3.5 h-3.5 ${presente ? 'text-white' : 'text-gray-400'}`} />
                         </div>
-                        <span className={`mt-1.5 text-center leading-tight font-medium ${presente ? cfg.textClass : 'text-gray-400'}`}
-                          style={{ fontSize: '9px', maxWidth: '54px' }}>
-                          {cfg.label}
-                        </span>
                         {esActual && (
                         <span className={`absolute top-1/2 -translate-y-5 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full ${cfg.bgClass} border-2 border-white`}
                           style={{ animation: 'sonar-ring 1.6s ease-out infinite' }} />
@@ -501,6 +560,25 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
 
         </div>
       </div>
+      {pdfModal && (
+        <ModalPDF
+          url={pdfModal.url}
+          filename={pdfModal.filename}
+          onClose={() => setPdfModal(null)}
+        />
+      )}
+      {eventoEditando && (
+        <ModalEditarEvento
+          productoId={data.id}
+          indexEvento={eventoEditando.index}
+          evento={eventoEditando.evento}
+          onClose={() => setEventoEditando(null)}
+          onSuccess={(productoActualizado) => {
+            setData(productoActualizado);
+            setEventoEditando(null);
+          }}
+        />
+      )}
     </>
   );
 }
