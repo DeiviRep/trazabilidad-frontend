@@ -196,7 +196,7 @@ function MapaTrazabilidad({ eventos }: { eventos: Evento[] }) {
   );
   const center: [number, number] = validos[0].coordenadas;
   return (
-    <div className="flex-1 overflow-hidden rounded-xl border border-gray-200 min-h-0">
+    <div className="flex-1 overflow-hidden rounded-xl border border-gray-200 min-h-[300px] lg:min-h-0">
       <MapContainer center={center} zoom={3} className="h-full w-full" scrollWheelZoom>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
         {validos.map((e, i) => i < validos.length - 1 && (
@@ -363,10 +363,10 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
         </div>
 
         {/* ── Cuerpo ── */}
-        <div className="flex gap-4 flex-1 min-h-0">
+        <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
 
           {/* ── Historial — panel izquierdo ── */}
-          <div className="w-96 flex-shrink-0 flex flex-col min-h-0">
+          <div className="w-full lg:w-96 flex-shrink-0 flex flex-col min-h-0">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col h-full">
 
               {/* Header del panel */}
@@ -506,7 +506,7 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
 
           {/* ── Mapa — panel derecho ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex-1 flex flex-col min-h-0">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col min-h-[350px] lg:flex-1 lg:min-h-0">
 
               <div className="flex-shrink-0 mb-3 space-y-3">
                 <div className="flex items-center justify-between">
