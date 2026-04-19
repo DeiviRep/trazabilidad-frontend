@@ -13,6 +13,19 @@ import { useExportarPDF } from '@/hooks/useExportarPDF';
 import { ModalPDF } from '@/components/ModalPDF';
 import { ModalEditarEvento } from '@/components/ModalEditarEvento';
 import { useHasRole } from '@/context/AuthContext';
+import { useMap } from 'react-leaflet';
+
+function FlyToLocation({ position }: { position: [number, number] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, 6, { duration: 1.5 });
+    }
+  }, [position]);
+
+  return null;
+}
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer    = dynamic(() => import('react-leaflet').then(m => m.TileLayer),    { ssr: false });
@@ -182,7 +195,10 @@ function EventoDetalle({ evento }: { evento: Evento }) {
   }
 }
 
-function MapaTrazabilidad({ eventos }: { eventos: Evento[] }) {
+function MapaTrazabilidad({ eventos, selectedPosition }: { 
+  eventos: Evento[],
+  selectedPosition: [number, number] | null
+}) {
   const validos = eventos.filter(
     e => e.coordenadas?.length === 2 && !isNaN(e.coordenadas[0]) && !isNaN(e.coordenadas[1])
   );
@@ -198,6 +214,7 @@ function MapaTrazabilidad({ eventos }: { eventos: Evento[] }) {
   return (
     <div className="flex-1 overflow-hidden rounded-xl border border-gray-200 min-h-[300px] lg:min-h-0">
       <MapContainer center={center} zoom={3} className="h-full w-full" scrollWheelZoom>
+        {selectedPosition && <FlyToLocation position={selectedPosition} />}
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
         {validos.map((e, i) => i < validos.length - 1 && (
           <Polyline key={`l${i}`}
@@ -239,6 +256,7 @@ function MapaTrazabilidad({ eventos }: { eventos: Evento[] }) {
 
 export default function TrazabilidadPage({ params }: { params: Promise<Params> }) {
   const { id: idProducto } = use(params);
+  const [selectedPosition, setSelectedPosition] = useState<[number, number] | null>(null);
   const [data, setData] = useState<DispositivoDataType>({} as DispositivoDataType);
   const [loading, setLoading] = useState(true);
   const { exportar, exportando } = useExportarPDF();
@@ -268,6 +286,17 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
       finally { setLoading(false); }
     })();
   }, [idProducto]);
+
+  useEffect(() => {
+    if (data.eventos?.length) {
+      const validos = data.eventos.filter(e => e.coordenadas?.length === 2);
+      const ultimo = validos[validos.length - 1];
+    
+      if (ultimo) {
+        setSelectedPosition(ultimo.coordenadas);
+      }
+    }
+  }, [data.eventos]);
 
   if (loading) return (
     <div className="flex items-center justify-center h-full">
@@ -400,7 +429,7 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                   const { dia, hora } = formatFecha(evento.fecha);
 
                   return (
-                    <div key={index} className="relative flex gap-4 pb-6">
+                    <div key={index} onClick={() => { if (evento.coordenadas) { setSelectedPosition(evento.coordenadas); }}} className="relative flex gap-4 pb-6 cursor-pointer hover:bg-gray-50 rounded-lg transition">
 
                       {/* Línea vertical conectora */}
                       {!isLast && (
@@ -554,7 +583,10 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                 </div>
               </div>
 
-              <MapaTrazabilidad eventos={data.eventos || []} />
+              <MapaTrazabilidad 
+                eventos={data.eventos || []} 
+                selectedPosition={selectedPosition}
+              />
             </div>
           </div>
 

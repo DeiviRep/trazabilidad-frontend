@@ -50,14 +50,32 @@ interface DispositivoMapa {
   puntoControl: string;
 }
 
-function MapaEnvios({ dispositivos }: { dispositivos: DispositivoMapa[] }) {
+  function MapaEnvios({ dispositivos, selectedLocation }: { 
+    dispositivos: DispositivoMapa[], 
+    selectedLocation: [number, number] | null 
+  }) {
   const center: [number, number] = dispositivos.length > 0 && dispositivos[0].ubicacion
     ? dispositivos[0].ubicacion
     : [-16.5, -68.15];
 
+    function FlyToLocation({ location }: { location: [number, number] | null }) {
+  const map = useMapEvents({});
+
+  useEffect(() => {
+      if (location) {
+        map.flyTo(location, 10, {
+          duration: 1.5
+        });
+      }
+    }, [location, map]);
+
+    return null;
+  }
+
   return (
     <div className="h-64 w-full overflow-hidden rounded-lg border border-gray-200">
       <MapContainer center={center} zoom={6} className="h-full w-full">
+        <FlyToLocation location={selectedLocation} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {dispositivos.map((d) => {
           if (!d.ubicacion || d.ubicacion.length !== 2) return null;
@@ -90,7 +108,10 @@ function MapaEnvios({ dispositivos }: { dispositivos: DispositivoMapa[] }) {
 export default function DashboardPage() {
   const [dataEstadistica, setDataEstadistica] = useState<dataEstadisticaType>();
   const [dispositivosMapa, setDispositivosMapa] = useState<DispositivoMapa[]>([]);
-
+  const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(
+    dispositivosMapa[0]?.ubicacion || null
+  );
+  
   const stats: Stat[] = [
     { label: 'Productos Registrados', valor: dataEstadistica?.registrados || '0', icono: Package, color: 'bg-blue-500' },
     { label: 'En Tránsito', valor: dataEstadistica?.enTransitos || '0', icono: Truck, color: 'bg-yellow-500' },
@@ -144,6 +165,12 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    if (dispositivosMapa.length > 0) {
+      setSelectedLocation(dispositivosMapa[0].ubicacion);
+    }
+  }, [dispositivosMapa]);
+
+  useEffect(() => {
     (async () => {
       const L = await import('leaflet');
 
@@ -187,7 +214,15 @@ export default function DashboardPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
           <div className="space-y-4">
             {dataEstadistica?.dispositivosRecientes.map((producto: recienteType, index) => (
-              <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+              <div 
+                key={index} 
+                onClick={() => {
+                  if (producto.coordenadas) {
+                    setSelectedLocation(producto.coordenadas);
+                  }
+                }}
+                className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
+              >
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Package className="w-5 h-5 text-blue-600" />
                 </div>
@@ -213,7 +248,10 @@ export default function DashboardPage() {
             )}
           </h3>
           {dispositivosMapa.length > 0 ? (
-            <MapaEnvios dispositivos={dispositivosMapa} />
+            <MapaEnvios 
+              dispositivos={dispositivosMapa} 
+              selectedLocation={selectedLocation}
+            />
           ) : (
             <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
               <div className="text-center">
