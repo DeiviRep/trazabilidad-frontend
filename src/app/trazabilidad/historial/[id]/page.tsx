@@ -14,6 +14,7 @@ import { ModalPDF } from '@/components/ModalPDF';
 import { ModalEditarEvento } from '@/components/ModalEditarEvento';
 import { useHasRole } from '@/context/AuthContext';
 import { useMap } from 'react-leaflet';
+import { useRef } from 'react';
 
 function FlyToLocation({ position }: { position: [number, number] }) {
   const map = useMap();
@@ -256,6 +257,7 @@ function MapaTrazabilidad({ eventos, selectedPosition }: {
 
 export default function TrazabilidadPage({ params }: { params: Promise<Params> }) {
   const { id: idProducto } = use(params);
+  const ultimoEventoRef = useRef<HTMLDivElement | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<[number, number] | null>(null);
   const [data, setData] = useState<DispositivoDataType>({} as DispositivoDataType);
   const [loading, setLoading] = useState(true);
@@ -295,6 +297,15 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
       if (ultimo) {
         setSelectedPosition(ultimo.coordenadas);
       }
+    }
+  }, [data.eventos]);
+
+  useEffect(() => {
+    if (data.eventos?.length && ultimoEventoRef.current) {
+      ultimoEventoRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center', // o 'start' si lo quieres arriba
+      });
     }
   }, [data.eventos]);
 
@@ -429,7 +440,7 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                   const { dia, hora } = formatFecha(evento.fecha);
 
                   return (
-                    <div key={index} onClick={() => { if (evento.coordenadas) { setSelectedPosition(evento.coordenadas); }}} className="relative flex gap-4 pb-6 cursor-pointer hover:bg-gray-50 rounded-lg transition">
+                    <div key={index} ref={isLast ? ultimoEventoRef : null} onClick={() => { if (evento.coordenadas) { setSelectedPosition(evento.coordenadas); }}} className="relative flex gap-4 pb-6 cursor-pointer hover:bg-gray-50 rounded-lg transition">
 
                       {/* Línea vertical conectora */}
                       {!isLast && (
@@ -514,10 +525,13 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
                           )}
                         </div>
                       {esAdmin && (
-                        <button
-                          onClick={() => setEventoEditando({ index, evento })}
-                          className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
-                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // 🔥 CLAVE
+                              setEventoEditando({ index, evento });
+                            }}
+                            className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                          >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
