@@ -5,17 +5,7 @@ import dynamic from 'next/dynamic';
 import { Package, Truck, CheckCircle, MapPin } from 'lucide-react';
 import { TrazabilidadAPI } from '@/services/api';
 import { useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
-// 🔴 FIX ICONOS (esto es lo importante)
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: '/marker-icon-2x.png',
-  iconUrl: '/marker-icon.png',
-  shadowUrl: '/marker-shadow.png',
-});
 
 // Carga dinámica de react-leaflet
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
@@ -151,6 +141,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     cargarDatos();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const L = await import('leaflet');
+
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: '/marker-icon-2x.png',
+        iconUrl: '/marker-icon.png',
+        shadowUrl: '/marker-shadow.png',
+      });
+    })();
   }, []);
 
   return (
