@@ -258,6 +258,7 @@ function MapaTrazabilidad({ eventos, selectedPosition }: {
 export default function TrazabilidadPage({ params }: { params: Promise<Params> }) {
   const { id: idProducto } = use(params);
   const ultimoEventoRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<[number, number] | null>(null);
   const [data, setData] = useState<DispositivoDataType>({} as DispositivoDataType);
   const [loading, setLoading] = useState(true);
@@ -301,10 +302,16 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
   }, [data.eventos]);
 
   useEffect(() => {
-    if (data.eventos?.length && ultimoEventoRef.current) {
-      ultimoEventoRef.current.scrollIntoView({
+    if (data.eventos?.length && ultimoEventoRef.current && containerRef.current) {
+      const container = containerRef.current;
+      const element = ultimoEventoRef.current;
+    
+      const offsetTop = element.offsetTop;
+      const containerHeight = container.clientHeight;
+    
+      container.scrollTo({
+        top: offsetTop - containerHeight / 2,
         behavior: 'smooth',
-        block: 'center', // o 'start' si lo quieres arriba
       });
     }
   }, [data.eventos]);
@@ -430,7 +437,7 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
               </div>
 
               {/* Timeline */}
-              <div className="flex-1 overflow-y-auto px-5 py-4"
+              <div ref={containerRef} className="flex-1 overflow-y-auto px-5 py-4"
                 style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
                 {data.eventos?.map((evento, index) => {
                   const cfg = ESTADO_CONFIG[evento.tipo];
