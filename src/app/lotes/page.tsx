@@ -384,7 +384,7 @@ export default function LotesPage() {
   });
 
   return (
-    <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR', 'TRANSPORTISTA', 'ADUANA', 'DISTRIBUIDOR']}>
+    <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR', 'TRANSPORTISTA', 'ADUANA', 'DISTRIBUIDOR', 'COMERCIANTE', 'ADUANA_EXTRANJERA', 'ADUANA_BOLIVIA']}>
     <div className="space-y-6">
       {/* Modal de productos */}
       <ProductosModal
