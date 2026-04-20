@@ -115,7 +115,7 @@ const handleOpenQrModal = async (id: string) => {
   }, []);
 
   return (
-      <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR']}>
+      <RoleGuard allowedRoles={['ADMIN', 'PROVEEDOR', 'COMERCIANTE']}>
         {/* <Header /> */}
     <div className="space-y-6">
       <QRModal onClose={ () => setQrModalOpen(false)} open={qrModalOpen} imageUrl={qrImage}/>

@@ -21,7 +21,7 @@ export const ROLE_ROUTES: Record<Rol, string[]> = {
   ADUANA_EXTRANJERA:['/dashboard', '/lotes', '/scanner'],
   ADUANA_BOLIVIA:['/dashboard', '/lotes', '/scanner'],
   DISTRIBUIDOR: ['/dashboard', '/lotes', '/scanner'],
-  COMERCIANTE: ['/dashboard', '/lotes', '/scanner'],
+  COMERCIANTE: ['/dashboard', '/lotes', '/scanner', '/productos'],
   CONSUMIDOR:   ['/dashboard', '/scanner'],
 };
 
