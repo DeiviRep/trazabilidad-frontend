@@ -22,7 +22,7 @@ export const ROLE_ROUTES: Record<Rol, string[]> = {
   ADUANA_BOLIVIA:['/dashboard', '/lotes', '/scanner'],
   DISTRIBUIDOR: ['/dashboard', '/lotes', '/scanner'],
   COMERCIANTE: ['/dashboard', '/lotes', '/scanner', '/productos'],
-  CONSUMIDOR:   ['/dashboard', '/scanner', 'productos'],
+  CONSUMIDOR:   ['/dashboard', '/scanner'],
 };
 
 // Qué menú mostrar en Sidebar por rol
@@ -80,7 +80,6 @@ export const SIDEBAR_ITEMS: Record<Rol, { label: string; href: string; icon: str
   CONSUMIDOR: [
     { label: 'Dashboard',     href: '/dashboard',  icon: 'home' },
     { label: 'Verificar QR',  href: '/scanner',    icon: 'qr' },
-    { label: 'Productos',     href: '/productos',  icon: 'package' },
   ],
 };
 
