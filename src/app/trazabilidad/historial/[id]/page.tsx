@@ -291,6 +291,18 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
   }, [idProducto]);
 
   useEffect(() => {
+    (async () => {
+      try {
+        if (eventoEditando) return;
+        const integridad = await TrazabilidadAPI.verificarIntegridad(idProducto);
+        setTieneAlteraciones(!integridad.integridadOk);
+      } catch { 
+        setTieneAlteraciones(false); 
+      }
+    })();
+  }, [eventoEditando]);
+
+  useEffect(() => {
     if (data.eventos?.length) {
       const validos = data.eventos.filter(e => e.coordenadas?.length === 2);
       const ultimo = validos[validos.length - 1];
