@@ -328,9 +328,12 @@ export default function LotesPage() {
   const [selectedLote, setSelectedLote] = useState<Lote | null>(null);
   const [productosLote, setProductosLote] = useState<ProductoDetalle[]>([]);
   const [loadingProductos, setLoadingProductos] = useState<boolean>(false);
+  const [loadingLotes, setLoadingLotes] = useState<boolean>(true);
 
   const cargarDatos = async () => {
-    const data = await TrazabilidadAPI.listarResumenLotes();
+    setLoadingLotes(true);
+    try {
+      const data = await TrazabilidadAPI.listarResumenLotes();
     setDataLotes(data?.map((lote: any) => {
       return {
         id: lote.id,
@@ -342,8 +345,13 @@ export default function LotesPage() {
         url: lote.url,
         fechaCreacion: lote.fechaCreacion,
         eventos: lote.eventos
-      }
-    }));
+    }
+      }));
+    } catch (error) {
+      console.error('Error al cargar lotes:', error);
+    } finally {
+      setLoadingLotes(false);
+    }
   };
 
   const cargarProductosLote = async (loteId: string) => {
@@ -432,7 +440,18 @@ export default function LotesPage() {
               </tr>
             </thead>
             <tbody>
-              {lotesFiltrados?.map((lote) => (
+              {loadingLotes ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-4 px-4"><div className="space-y-2"><div className="h-3 bg-gray-200 rounded w-24 animate-pulse" /><div className="h-2.5 bg-gray-200 rounded w-36 animate-pulse" /></div></td>
+                    <td className="py-4 px-4"><div className="flex items-center space-x-3"><div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse" /><div className="space-y-2"><div className="h-3 bg-gray-200 rounded w-20 animate-pulse" /><div className="h-2.5 bg-gray-200 rounded w-16 animate-pulse" /></div></div></td>
+                    <td className="py-4 px-4"><div className="h-6 bg-gray-200 rounded w-16 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="h-5 bg-gray-200 rounded-full w-24 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="h-3 bg-gray-200 rounded w-20 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="flex space-x-2"><div className="h-8 bg-gray-200 rounded-lg w-28 animate-pulse" /><div className="h-8 bg-gray-200 rounded-lg w-32 animate-pulse" /></div></td>
+                  </tr>
+                ))
+              ) : lotesFiltrados?.map((lote) => (
                 <tr key={lote.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-4 px-4">
                     <div>
