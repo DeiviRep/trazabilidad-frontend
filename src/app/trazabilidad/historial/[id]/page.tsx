@@ -15,6 +15,7 @@ import { ModalEditarEvento } from '@/components/ModalEditarEvento';
 import { useHasRole } from '@/context/AuthContext';
 import { useMap } from 'react-leaflet';
 import { useRef } from 'react';
+import { useProductoSSE } from '@/hooks/useProductoSSE';
 
 function FlyToLocation({ position }: { position: [number, number] }) {
   const map = useMap();
@@ -272,6 +273,12 @@ export default function TrazabilidadPage({ params }: { params: Promise<Params> }
     evento: Evento;
   } | null>(null);
   
+  useProductoSSE(idProducto, (data) => {
+    if (data.producto) {
+      setData(data.producto); // ← actualiza el estado con los datos nuevos
+    }
+  });
+
   useEffect(() => {
     (async () => {
       try {
