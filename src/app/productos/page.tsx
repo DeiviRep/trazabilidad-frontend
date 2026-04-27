@@ -54,6 +54,7 @@ export default function ProductosPage() {
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedProducto, setSelectedProducto] = useState<string>('');
   const [qrImage, setQrImage] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -95,20 +96,27 @@ const handleOpenQrModal = async (id: string) => {
   setQrModalOpen(true);
 };
   const cargarDatos = async () => {
-    const data = await TrazabilidadAPI.listarProductos();
-    setDataProductos(data.map((item: DataProductType) => {
-      return {
-        id: item.id,
-        lote: item.lote,
-        marca: item.marca,
-        modelo: item.modelo,
-        imeiSerial: item.imeiSerial,
-        estado: item.estado,
-        url: item.urlLote,
-        fechaCreacion: item.fechaCreacion,
-        eventos: item.eventos,
-      }
-    }));
+    setLoading(true);
+    try {
+      const data = await TrazabilidadAPI.listarProductos();
+      setDataProductos(data.map((item: DataProductType) => {
+        return {
+          id: item.id,
+          lote: item.lote,
+          marca: item.marca,
+          modelo: item.modelo,
+          imeiSerial: item.imeiSerial,
+          estado: item.estado,
+          url: item.urlLote,
+          fechaCreacion: item.fechaCreacion,
+          eventos: item.eventos,
+        }
+  }));
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(() => {
     cargarDatos();
@@ -156,7 +164,18 @@ const handleOpenQrModal = async (id: string) => {
               </tr>
             </thead>
             <tbody>
-              {productosFiltrados.map((lote) => (
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-4 px-4"><div className="flex items-center space-x-3"><div className="w-10 h-10 bg-gray-200 rounded-lg animate-pulse" /><div className="space-y-2"><div className="h-3 bg-gray-200 rounded w-24 animate-pulse" /><div className="h-2.5 bg-gray-200 rounded w-16 animate-pulse" /></div></div></td>
+                    <td className="py-4 px-4"><div className="h-3 bg-gray-200 rounded w-20 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="h-3 bg-gray-200 rounded w-32 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="h-5 bg-gray-200 rounded-full w-24 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="h-3 bg-gray-200 rounded w-28 animate-pulse" /></td>
+                    <td className="py-4 px-4"><div className="h-6 bg-gray-200 rounded w-8 animate-pulse" /></td>
+                  </tr>
+                ))
+              ) : productosFiltrados.map((lote) => (
                 <tr key={lote.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-3">
